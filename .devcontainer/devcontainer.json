@@ -1,0 +1,8 @@
+{
+  "name": "wa-archive",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "postCreateCommand": "npm install",
+  "postStartCommand": "mkdir -p data && (nohup sh -c 'while true; do node server.js; sleep 5; done' >> data/server.log 2>&1 &)",
+  "forwardPorts": [3000],
+  "portsAttributes": { "3000": { "label": "WA Archive", "onAutoForward": "openBrowser" } }
+}

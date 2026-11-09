@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>أرشيف واتساب</title>
+<style>
+:root{--bg:#f0f2f5;--panel:#fff;--text:#111b21;--sub:#667781;--me:#d9fdd3;--them:#fff;--del:#fde8e8;--delb:#d93025;--line:#e9edef;--head:#075e54}
+@media(prefers-color-scheme:dark){:root{--bg:#0b141a;--panel:#111b21;--text:#e9edef;--sub:#8696a0;--me:#005c4b;--them:#202c33;--del:#4a2326;--delb:#ff6b6b;--line:#222d34;--head:#202c33}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
+header{background:var(--head);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;font-weight:600}
+header button{background:none;border:0;color:#fff;font-size:22px;cursor:pointer;display:none}
+#app{display:flex;flex-direction:column;height:100%}
+#list,#thread{flex:1;overflow-y:auto}
+#thread{display:none;flex-direction:column;gap:6px;padding:10px;direction:ltr}
+.chat{display:flex;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);cursor:pointer}
+.chat b{display:block}.chat small{color:var(--sub);display:block;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{color:var(--delb);font-size:12px;white-space:nowrap}
+.msg{max-width:82%;padding:7px 10px;border-radius:10px;background:var(--them);direction:rtl;word-break:break-word}
+.msg.me{align-self:flex-end;background:var(--me)}.msg:not(.me){align-self:flex-start}
+.msg.del{background:var(--del);border:1px solid var(--delb)}
+.who{font-size:12px;color:var(--sub);margin-bottom:2px}
+.txt{unicode-bidi:plaintext;white-space:pre-wrap}
+.meta{font-size:11px;color:var(--sub);margin-top:3px}
+.delmark{font-size:12px;color:var(--delb);font-weight:600;margin-top:4px}
+.msg img,.msg video{max-width:100%;border-radius:6px;display:block;margin-bottom:4px}
+.banner{background:#fff3cd;color:#664d03;padding:12px 16px;text-align:center;display:none;line-height:1.7}.banner b{font-size:24px;letter-spacing:3px;direction:ltr;display:block}
+.empty{padding:40px 20px;text-align:center;color:var(--sub)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><button id="back" aria-label="رجوع">→</button><span id="title">أرشيف واتساب</span></header>
+  <div id="banner" class="banner"></div>
+  <div id="list"></div>
+  <div id="thread"></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const fmt = ts => new Date(ts).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' });
+let current = null;
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+async function loadList() {
+  const chats = await (await fetch('/api/chats')).json();
+  const box = $('list');
+  box.replaceChildren();
+  if (!chats.length) box.append(el('div', 'empty', 'لا توجد رسائل بعد. ستظهر هنا فور وصولها.'));
+  for (const c of chats) {
+    const row = el('div', 'chat');
+    const left = el('div');
+    left.append(el('b', '', c.name), el('small', '', c.last.text || '[' + c.last.type.replace('Message', '') + ']'));
+    const right = el('div');
+    right.append(el('small', '', fmt(c.last.ts)));
+    if (c.deleted) right.append(el('div', 'badge', '❌ ' + c.deleted + ' محذوفة'));
+    row.append(left, right);
+    row.onclick = () => openChat(c);
+    box.append(row);
+  }
+}
+
+function mediaNode(m) {
+  const url = '/media/' + m.media;
+  if (m.type === 'imageMessage' || m.type === 'stickerMessage') { const i = el('img'); i.src = url; return i; }
+  if (m.type === 'videoMessage') { const v = el('video'); v.src = url; v.controls = true; return v; }
+  if (m.type === 'audioMessage') { const a = el('audio'); a.src = url; a.controls = true; return a; }
+  const a = el('a', '', '📎 ملف'); a.href = url; return a;
+}
+
+async function loadThread() {
+  const msgs = await (await fetch('/api/chat?jid=' + encodeURIComponent(current.jid))).json();
+  const box = $('thread');
+  const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.replaceChildren();
+  for (const m of msgs) {
+    const d = el('div', 'msg' + (m.fromMe ? ' me' : '') + (m.deleted ? ' del' : ''));
+    if (!m.fromMe && (current.jid.endsWith('@g.us') || current.jid === 'status@broadcast')) d.append(el('div', 'who', m.senderName));
+    if (m.media) d.append(mediaNode(m));
+    if (m.text) d.append(el('div', 'txt', m.text));
+    d.append(el('div', 'meta', fmt(m.ts)));
+    if (m.deleted) d.append(el('div', 'delmark', '❌ حُذفت في ' + fmt(m.deletedAt)));
+    box.append(d);
+  }
+  if (atEnd) box.scrollTop = box.scrollHeight;
+}
+
+async function openChat(c) {
+  current = c;
+  $('title').textContent = c.name;
+  $('back').style.display = 'block';
+  $('list').style.display = 'none';
+  $('thread').style.display = 'flex';
+  await loadThread();
+  $('thread').scrollTop = $('thread').scrollHeight;
+}
+
+$('back').onclick = () => {
+  current = null;
+  $('title').textContent = 'أرشيف واتساب';
+  $('back').style.display = 'none';
+  $('thread').style.display = 'none';
+  $('list').style.display = 'block';
+  loadList();
+};
+
+async function loadStatus() {
+  const b = $('banner');
+  try {
+    const s = await (await fetch('/api/status')).json();
+    if (s.state === 'pairing' && s.code) {
+      b.replaceChildren('أدخل هذا الكود في واتساب: الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف', el('b', '', s.code));
+      b.style.display = 'block';
+    } else if (s.state === 'needs_phone') {
+      b.textContent = 'أضف رقم هاتفك كسر باسم PHONE في إعدادات Codespaces ثم أعد تشغيل الـ Codespace.';
+      b.style.display = 'block';
+    } else if (s.state === 'starting') {
+      b.textContent = 'جارٍ الاتصال...'; b.style.display = 'block';
+    } else b.style.display = 'none';
+  } catch { b.textContent = 'الخادم غير متصل.'; b.style.display = 'block'; }
+}
+loadList();
+loadStatus();
+setInterval(loadStatus, 4000);
+setInterval(() => current ? loadThread() : loadList(), 4000);
+</script>
+</body>
+</html>

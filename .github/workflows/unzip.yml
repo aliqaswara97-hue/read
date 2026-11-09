@@ -1,0 +1,22 @@
+name: Unzip
+on:
+  push:
+    paths: ['*.zip']
+permissions:
+  contents: write
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          shopt -s nullglob
+          for z in *.zip; do unzip -o "$z" && rm "$z"; done
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Extract zip"
+            git push
+          fi

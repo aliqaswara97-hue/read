@@ -12,7 +12,15 @@ const DATA = './data', MEDIA = `${DATA}/media`, DB_FILE = `${DATA}/db.json`;
 fs.mkdirSync(MEDIA, { recursive: true });
 
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
-db.messages ||= {}; db.names ||= {}; db.contacts ||= {}; db.alias ||= {};
+db.messages ||= {}; db.names ||= {}; db.contacts ||= {}; db.alias ||= {}; db.vcards ||= [];
+// حذف كل ما يخص القنوات (newsletter) نهائيًا
+for (const [id, m] of Object.entries(db.messages)) {
+  if (m.chat?.endsWith('@newsletter')) {
+    if (m.media) fs.rmSync(`${MEDIA}/${m.media}`, { force: true });
+    delete db.messages[id];
+  }
+}
+let sockRef = null;
 let timer;
 const save = () => {
   clearTimeout(timer);
@@ -35,9 +43,31 @@ function setContact(c) {
   for (const k of [c.id, c.lid, c.phoneNumber]) if (k) db.contacts[norm(k)] = n;
   save();
 }
-const nameOf = (jid) =>
-  db.contacts[jid] || db.contacts[db.alias[jid]] || db.names[jid] || db.names[db.alias[jid]] ||
-  (jid === 'status@broadcast' ? 'الحالات' : jid.split('@')[0]);
+// فهرس أسماء ملف vCard: آخر 9 أرقام من الرقم => الاسم
+const vindex = new Map();
+function buildIndex() {
+  vindex.clear();
+  for (const c of db.vcards) for (const n of c.nums) {
+    const d = String(n).replace(/\D/g, '').replace(/^00/, '').replace(/^0+/, '');
+    if (d.length >= 7) vindex.set(d.slice(-9), c.name);
+  }
+}
+buildIndex();
+const nameOf = (jid) => {
+  if (jid === 'status@broadcast') return 'الحالات';
+  const ids = [jid, db.alias[jid]].filter(Boolean);
+  for (const k of ids) if (db.contacts[k]) return db.contacts[k];
+  for (const k of ids) if (k.endsWith('@s.whatsapp.net')) { const v = vindex.get(k.split('@')[0].slice(-9)); if (v) return v; }
+  for (const k of ids) if (db.names[k]) return db.names[k];
+  return jid.endsWith('@lid') ? 'مستخدم واتساب' : jid.split('@')[0];
+};
+async function learnLid(sock, jid) {
+  if (!jid.endsWith('@lid') || db.alias[jid]) return;
+  try {
+    const pn = await sock.signalRepository?.lidMapping?.getPNForLID?.(jid);
+    if (pn) { const p = norm(String(pn).includes('@') ? pn : pn + '@s.whatsapp.net'); db.alias[jid] = p; db.alias[p] = jid; save(); }
+  } catch {}
+}
 const numberOf = (jid) => {
   const pn = [jid, db.alias[jid]].find(j => j?.endsWith('@s.whatsapp.net'));
   return pn ? '+' + pn.split('@')[0] : '';
@@ -50,11 +80,18 @@ function markDeleted(id) {
 
 async function store(sock, m) {
   const jid = norm(m.key.remoteJid);
-  if (!jid || !m.message) return;
-  const msg = unwrap(m.message);
+  if (!jid || !m.message || jid.endsWith('@newsletter')) return;
+  const raw = unwrap(m.message);
+  const msg = raw.editedMessage ? unwrap(raw.editedMessage.message) : raw;
   if (msg.protocolMessage) {
     const p = msg.protocolMessage;
     if (p.type === 0 && p.key?.id) markDeleted(p.key.id); // REVOKE
+    if (p.type === 14 && p.key?.id && db.messages[p.key.id]) { // EDIT
+      const e = unwrap(p.editedMessage || {});
+      const t = e?.conversation || e?.extendedTextMessage?.text || '';
+      const r = db.messages[p.key.id];
+      if (t && t !== r.text) { r.orig ||= r.text; r.text = t; r.edited = true; save(); }
+    }
     return;
   }
   const type = Object.keys(msg).find(k => k !== 'messageContextInfo');
@@ -70,9 +107,11 @@ async function store(sock, m) {
     type, ts: Number(m.messageTimestamp) * 1000 || Date.now(),
     media: null, deleted: false,
     bg: body?.backgroundArgb ?? null,
+    quotedFrom: norm(body?.contextInfo?.participant || ''),
     quoted: (() => { const q = body?.contextInfo?.quotedMessage; const u = q && unwrap(q); return u?.conversation || u?.extendedTextMessage?.text || ''; })()
   };
   if (m.pushName && !rec.fromMe) db.names[sender] ||= m.pushName;
+  await learnLid(sock, jid); if (sender !== jid) await learnLid(sock, sender);
   if (jid.endsWith('@g.us') && !db.names[jid]) {
     try { db.names[jid] = (await sock.groupMetadata(jid)).subject; } catch {}
   }
@@ -94,6 +133,7 @@ async function start() {
     version, auth: state, logger: log,
     browser: Browsers.ubuntu('Chrome'), syncFullHistory: false
   });
+  sockRef = sock;
   sock.ev.on('creds.update', saveCreds);
 
   if (!sock.authState.creds.registered) {
@@ -142,7 +182,24 @@ const app = express();
 app.use(express.static('public'));
 app.use('/media', express.static(MEDIA));
 
-app.get('/api/status', (_, res) => res.json({ ...status, contacts: Object.keys(db.contacts).length }));
+app.use(express.json({ limit: '20mb' }));
+app.get('/api/status', (_, res) => res.json({ ...status, contacts: Object.keys(db.contacts).length, imported: db.vcards.length }));
+
+app.post('/api/contacts', (req, res) => {
+  const list = Array.isArray(req.body?.list) ? req.body.list : [];
+  db.vcards = list.slice(0, 30000)
+    .map(c => ({ name: String(c.name || '').slice(0, 100), nums: (Array.isArray(c.nums) ? c.nums : []).map(String).slice(0, 10) }))
+    .filter(c => c.name && c.nums.length);
+  buildIndex(); save();
+  res.json({ count: db.vcards.length });
+});
+
+app.post('/api/resync', async (_, res) => {
+  try {
+    await sockRef?.resyncAppState(['critical_unblock_low', 'regular_low', 'regular_high', 'regular', 'critical_block'], true);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
 
 app.get('/api/chats', (req, res) => {
   const chats = {};
@@ -156,6 +213,10 @@ app.get('/api/chats', (req, res) => {
     }
   }
   let list = Object.values(chats);
+  for (const c of list) {
+    c.last = { ...c.last, senderName: c.last.fromMe ? 'أنا' : nameOf(c.last.sender) };
+    if (c.lastDeleted) c.lastDeleted = { ...c.lastDeleted, senderName: c.lastDeleted.fromMe ? 'أنا' : nameOf(c.lastDeleted.sender) };
+  }
   if (req.query.deleted === '1') list = list.filter(c => c.deleted).sort((a, b) => b.lastDeleted.deletedAt - a.lastDeleted.deletedAt);
   else list.sort((a, b) => b.last.ts - a.last.ts);
   res.json(list);
@@ -182,7 +243,7 @@ app.get('/api/chat', (req, res) => {
   const list = Object.values(db.messages)
     .filter(m => m.chat === req.query.jid)
     .sort((a, b) => a.ts - b.ts)
-    .map(m => ({ ...m, senderName: m.fromMe ? 'أنا' : nameOf(m.sender) }));
+    .map(m => ({ ...m, senderName: m.fromMe ? 'أنا' : nameOf(m.sender), quotedName: m.quotedFrom ? nameOf(m.quotedFrom) : '' }));
   res.json(list);
 });
 

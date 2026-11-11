@@ -5,48 +5,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>أرشيف واتساب</title>
 <style>
-:root{--head:#008069;--bg:#efeae2;--panel:#fff;--text:#111b21;--sub:#667781;--me:#d9fdd3;--them:#fff;--line:#e9edef;--red:#d93025;--reddim:#fde8e8;--green:#25d366}
-@media(prefers-color-scheme:dark){:root{--head:#1f2c34;--bg:#0b141a;--panel:#111b21;--text:#e9edef;--sub:#8696a0;--me:#005c4b;--them:#202c33;--line:#222d34;--red:#ff6b6b;--reddim:#3b2024}}
+:root{--head:#008069;--bg:#efeae2;--dot:#0000000d;--panel:#fff;--text:#111b21;--sub:#667781;--me:#d9fdd3;--them:#fff;--line:#e9edef;--red:#d93025;--reddim:#fde8e8;--green:#25d366;--tick:#53bdeb}
+@media(prefers-color-scheme:dark){:root{--head:#1f2c34;--bg:#0b141a;--dot:#ffffff0a;--panel:#111b21;--text:#e9edef;--sub:#8696a0;--me:#005c4b;--them:#202c33;--line:#222d34;--red:#ff6b6b;--reddim:#3b2024}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0;background:var(--panel);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,sans-serif;overscroll-behavior:none}
 #app{display:flex;flex-direction:column;height:100%}
-header{background:var(--head);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;min-height:56px}
-header .t{font-size:17px;font-weight:600;line-height:1.2}header .s{font-size:12px;opacity:.8;direction:ltr;text-align:start}
-#back{background:none;border:0;color:#fff;font-size:24px;display:none;padding:0 4px}
+header{background:var(--head);color:#fff;padding:8px 12px;display:flex;align-items:center;gap:10px;min-height:56px;position:relative}
+header .g{flex:1;min-width:0}
+header .t{font-size:18px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .s{font-size:12px;opacity:.8;direction:ltr;text-align:start}
+header button{background:none;border:0;color:#fff;font-size:22px;padding:4px 8px}
+#back{display:none}
+#menu{position:absolute;top:50px;inset-inline-start:8px;background:var(--panel);color:var(--text);border-radius:8px;box-shadow:0 3px 12px #0006;z-index:40;display:none;min-width:230px;overflow:hidden}
+#menu div{padding:14px 18px;font-size:15px;border-bottom:1px solid var(--line)}
 nav{background:var(--head);display:flex}
 nav button{flex:1;background:none;border:0;color:#ffffffaa;padding:11px 2px;font-size:13px;font-weight:600;border-bottom:3px solid transparent}
 nav button.on{color:#fff;border-color:#fff}
-#sbar{padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
-#sbar input{width:100%;border:0;border-radius:18px;background:var(--bg);color:var(--text);padding:9px 14px;font-size:14px;outline:none}
+#sbar{padding:8px 12px;background:var(--panel)}
+#sbar input{width:100%;border:0;border-radius:20px;background:var(--bg);color:var(--text);padding:10px 16px;font-size:14px;outline:none}
 #view{flex:1;overflow-y:auto;background:var(--panel)}
 #fbar{display:none;gap:8px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
-#thread{flex:1;overflow-y:auto;background:var(--bg);display:none;flex-direction:column;gap:3px;padding:8px 10px;direction:ltr}
+#thread{flex:1;overflow-y:auto;background-color:var(--bg);background-image:radial-gradient(var(--dot) 1.2px,transparent 1.2px);background-size:20px 20px;display:none;flex-direction:column;padding:8px 10px;direction:ltr}
+#ro{display:none;background:var(--panel);color:var(--sub);font-size:12px;text-align:center;padding:9px;border-top:1px solid var(--line)}
 .av{border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
-.ring{border-radius:50%;padding:3px;border:3px solid var(--green);flex:none}.ring.d{border-color:var(--red)}
-.row{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer}
+.row{display:flex;align-items:center;gap:12px;padding:9px 16px;cursor:pointer}.row:active{background:var(--bg)}
 .row .m{flex:1;min-width:0;border-bottom:1px solid var(--line);padding-bottom:10px}
-.row .n{font-weight:600;font-size:16px}
-.row .p{color:var(--sub);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .n{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .p{color:var(--sub);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;unicode-bidi:plaintext;text-align:start}
 .row .p.r{color:var(--red)}
 .row .e{text-align:end;font-size:12px;color:var(--sub);white-space:nowrap}
 .badge{display:inline-block;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:12px;margin-top:4px}
+.sec{padding:12px 16px 4px;color:var(--sub);font-size:13px;font-weight:600}
 .chip{padding:5px 14px;border-radius:16px;border:1px solid var(--line);background:none;color:var(--text);font-size:13px}
 .chip.on{background:var(--head);color:#fff;border-color:var(--head)}
 .older{align-self:center;background:var(--panel);color:var(--head);border:1px solid var(--line);border-radius:16px;padding:6px 16px;font-size:13px;margin:6px 0;direction:rtl}
-.day{align-self:center;background:var(--them);color:var(--sub);font-size:12px;padding:3px 10px;border-radius:8px;margin:8px 0;direction:rtl}
-.msg{max-width:84%;padding:6px 9px 4px;border-radius:9px;background:var(--them);direction:rtl;word-break:break-word;box-shadow:0 1px 1px #0002}
+.day{align-self:center;background:var(--them);color:var(--sub);font-size:12.5px;padding:4px 12px;border-radius:8px;margin:10px 0 6px;direction:rtl;box-shadow:0 1px 1px #0002}
+.msg{max-width:84%;padding:5px 8px 3px;border-radius:8px;background:var(--them);direction:rtl;word-break:break-word;box-shadow:0 1px 1px #0002;margin-top:6px}
+.msg.cont{margin-top:2px}
 .msg.me{align-self:flex-end;background:var(--me)}.msg:not(.me){align-self:flex-start}
+.msg.me:not(.cont){border-top-right-radius:0}.msg:not(.me):not(.cont){border-top-left-radius:0}
 .msg.del{border:1px solid var(--red);background:var(--reddim)}
 .who{font-size:13px;font-weight:600;margin-bottom:2px}
-.q{border-inline-start:4px solid var(--head);background:#0001;border-radius:6px;padding:4px 8px;font-size:13px;color:var(--sub);margin-bottom:4px}
-.txt{unicode-bidi:plaintext;white-space:pre-wrap;font-size:15px}
-.meta{font-size:11px;color:var(--sub);text-align:end;margin-top:2px}
+.q{border-inline-start:4px solid var(--head);background:#00000012;border-radius:6px;padding:4px 8px;font-size:13px;color:var(--sub);margin-bottom:4px;overflow:hidden;max-height:70px}
+.q b{display:block;font-size:12.5px}
+.txt{unicode-bidi:plaintext;white-space:pre-wrap;font-size:15px;line-height:1.45}.txt a{color:#027eb5}
+.meta{font-size:11px;color:var(--sub);text-align:end;margin-top:1px;display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.tk{color:var(--tick);letter-spacing:-3px}
 .dm{font-size:12px;color:var(--red);font-weight:600;margin-top:3px}
 .msg img,.msg video{max-width:100%;max-height:60vh;border-radius:6px;display:block;margin-bottom:4px}
 .msg img{cursor:zoom-in}.msg audio{width:240px;max-width:100%}
 .empty{padding:50px 24px;text-align:center;color:var(--sub);line-height:1.8;direction:rtl;align-self:center}
 .banner{background:#fff3cd;color:#664d03;padding:10px 16px;text-align:center;display:none;line-height:1.7;font-size:14px}.banner b{font-size:24px;letter-spacing:3px;direction:ltr;display:block}
-#down{position:fixed;bottom:20px;inset-inline-start:16px;width:44px;height:44px;border-radius:50%;border:0;background:var(--panel);color:var(--text);box-shadow:0 2px 6px #0005;font-size:20px;display:none;z-index:20}
+#down{position:fixed;bottom:54px;inset-inline-start:16px;width:44px;height:44px;border-radius:50%;border:0;background:var(--panel);color:var(--text);box-shadow:0 2px 6px #0005;font-size:20px;display:none;z-index:20}
 #viewer{position:fixed;inset:0;background:#000;z-index:50;display:none;flex-direction:column;color:#fff;direction:rtl;touch-action:manipulation}
 #bars{display:flex;gap:3px;padding:10px 8px 6px}#bars div{flex:1;height:3px;background:#ffffff55;border-radius:2px;overflow:hidden}#bars i{display:block;height:100%;width:0;background:#fff}
 #vh{display:flex;align-items:center;gap:10px;padding:4px 12px}
@@ -56,28 +66,39 @@ nav button.on{color:#fff;border-color:#fff}
 #cap{padding:12px 16px 24px;text-align:center;unicode-bidi:plaintext;min-height:40px}
 .tag{background:var(--red);color:#fff;font-size:12px;padding:3px 10px;border-radius:10px;display:inline-block;margin:4px 0}
 #x{background:none;border:0;color:#fff;font-size:26px}
-#lb{position:fixed;inset:0;background:#000e;z-index:60;display:none;align-items:center;justify-content:center}
-#lb img{max-width:100%;max-height:100%}
+#lb{position:fixed;inset:0;background:#000e;z-index:60;display:none;align-items:center;justify-content:center}#lb img{max-width:100%;max-height:100%}
+#sheet{position:fixed;inset:0;background:#0007;z-index:70;display:none;align-items:flex-end}
+#sheet>div{background:var(--panel);width:100%;border-radius:16px 16px 0 0;padding:16px 20px 28px;direction:rtl;max-height:75vh;overflow-y:auto}
+#sheet h3{margin:0 0 10px;font-size:17px}#sheet p{margin:8px 0;font-size:14px;line-height:1.6}#sheet small{color:var(--sub);display:block}
+#toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;z-index:80;display:none;max-width:90%;text-align:center}
 </style>
 </head>
 <body>
 <div id="app">
-  <header><button id="back" aria-label="رجوع">→</button><div id="hav"></div><div><div class="t" id="title">أرشيف واتساب</div><div class="s" id="subt"></div></div></header>
+  <header>
+    <button id="back" aria-label="رجوع">→</button><div id="hav"></div>
+    <div class="g"><div class="t" id="title">أرشيف واتساب</div><div class="s" id="subt"></div></div>
+    <button id="dots" aria-label="القائمة">⋮</button>
+    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div></div>
+  </header>
   <nav id="tabs"></nav>
   <div id="banner" class="banner"></div>
   <div id="sbar"><input id="q" type="search" placeholder="بحث..."></div>
   <div id="view"></div>
   <div id="fbar"></div>
   <div id="thread"></div>
+  <div id="ro">🔒 أرشيف للقراءة فقط — الرسائل المحذوفة محفوظة</div>
 </div>
+<input type="file" id="file" accept=".vcf,text/vcard,text/x-vcard,text/directory" style="display:none">
 <button id="down" aria-label="للأسفل">⌄</button>
 <div id="viewer">
   <div id="bars"></div>
   <div id="vh"><button id="x">✕</button><div id="vav"></div><div><b id="vn"></b><div id="vt" style="font-size:12px;opacity:.8"></div></div></div>
-  <div id="vc"></div>
-  <div id="cap"></div>
+  <div id="vc"></div><div id="cap"></div>
 </div>
 <div id="lb"><img alt=""></div>
+<div id="sheet"><div id="sc"></div></div>
+<div id="toast"></div>
 <script>
 const $ = id => document.getElementById(id);
 const TABS = [['chats','المحادثات'],['delmsgs','رسائل محذوفة'],['status','الحالات'],['delstatus','حالات محذوفة']];
@@ -88,17 +109,31 @@ const D = ts => new Date(ts).toLocaleDateString('ar', { day: 'numeric', month: '
 const same = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
 const day = ts => same(ts, Date.now()) ? 'اليوم' : same(ts, Date.now() - 864e5) ? 'أمس' : D(ts);
 const DT = ts => day(ts) + '، ' + T(ts);
+const FULL = ts => new Date(ts).toLocaleString('ar', { dateStyle: 'full', timeStyle: 'medium' });
 const LBL = { imageMessage: '📷 صورة', videoMessage: '🎥 فيديو', audioMessage: '🎤 رسالة صوتية', documentMessage: '📄 مستند', stickerMessage: 'ملصق' };
 const prev = m => m.text || LBL[m.type] || 'رسالة';
+const pv = (m, group) => (m.fromMe ? '✓✓ ' : (group && m.senderName ? m.senderName + ': ' : '')) + prev(m);
 const PAGE = 120;
 let tab = 'chats', cur = null, only = false, listSig = null, q = '', th = null;
 
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-function avatar(name, size, ringCls) {
-  const a = el('div', 'av', ([...String(name).replace(/[^\p{L}\p{N}]/gu, '')][0] || '؟').toUpperCase());
+function toast(t) { const e = $('toast'); e.textContent = t; e.style.display = 'block'; setTimeout(() => e.style.display = 'none', 3500); }
+function avatar(name, size, grp) {
+  const a = el('div', 'av', grp ? '👥' : ([...String(name).replace(/[^\p{L}\p{N}]/gu, '')][0] || '؟').toUpperCase());
   a.style.cssText = `width:${size}px;height:${size}px;background:${col(name)};font-size:${size * .42}px`;
-  if (ringCls == null) return a;
-  const r = el('div', 'ring ' + ringCls); r.append(a); return r;
+  return a;
+}
+function ringAvatar(name, size, n, red) {
+  const w = size + 12, r = (w - 3) / 2, C = 2 * Math.PI * r, gap = n > 1 ? 5 : 0, seg = C / n - gap, NS = 'http://www.w3.org/2000/svg';
+  const box = el('div'); box.style.cssText = `position:relative;width:${w}px;height:${w}px;flex:none`;
+  const s = document.createElementNS(NS, 'svg'), c = document.createElementNS(NS, 'circle');
+  s.setAttribute('width', w); s.setAttribute('height', w);
+  for (const [k, v] of Object.entries({ cx: w / 2, cy: w / 2, r, fill: 'none', 'stroke-width': 3, transform: `rotate(-90 ${w / 2} ${w / 2})` })) c.setAttribute(k, v);
+  if (n > 1) c.setAttribute('stroke-dasharray', `${seg} ${gap}`);
+  c.style.stroke = red ? 'var(--red)' : 'var(--green)';
+  s.append(c);
+  const a = avatar(name, size); a.style.position = 'absolute'; a.style.top = a.style.left = (w - size) / 2 + 'px';
+  box.append(s, a); return box;
 }
 function row(av, title, sub, subRed, e1, e2) {
   const r = el('div', 'row'), m = el('div', 'm'), e = el('div', 'e');
@@ -108,6 +143,12 @@ function row(av, title, sub, subRed, e1, e2) {
   r.append(av, m, e); return r;
 }
 const empty = t => el('div', 'empty', t);
+function linkify(parent, text) {
+  text.split(/(https?:\/\/[^\s]+)/g).forEach((p, i) => {
+    if (i % 2) { const a = el('a', '', p); a.href = p; a.target = '_blank'; a.rel = 'noopener'; parent.append(a); }
+    else if (p) parent.append(document.createTextNode(p));
+  });
+}
 
 function setHeader(title, sub, av, back) {
   $('title').textContent = title; $('subt').textContent = sub || '';
@@ -131,8 +172,8 @@ async function renderChats(delOnly) {
   const box = $('view'), st = box.scrollTop; box.replaceChildren();
   if (!chats.length) return box.append(empty(q ? 'لا نتائج.' : delOnly ? 'لا توجد رسائل محذوفة حتى الآن.' : 'لا توجد رسائل بعد. ستظهر هنا فور وصولها.'));
   for (const c of chats) {
-    const lm = delOnly ? c.lastDeleted : c.last;
-    const r = row(avatar(c.name, 50), c.name, delOnly ? '❌ ' + prev(lm) : prev(lm), delOnly,
+    const g = c.jid.endsWith('@g.us'), lm = delOnly ? c.lastDeleted : c.last;
+    const r = row(avatar(c.name, 50, g), c.name, delOnly ? '❌ ' + pv(lm, g) : pv(lm, g), delOnly,
       delOnly ? DT(lm.deletedAt) : (same(lm.ts, Date.now()) ? T(lm.ts) : day(lm.ts)), c.deleted ? '❌ ' + c.deleted : '');
     r.onclick = () => openChat(c, delOnly);
     box.append(r);
@@ -146,24 +187,30 @@ async function renderStatus(delOnly) {
   const sig = 's' + delOnly + q + JSON.stringify(gs); if (sig === listSig) return; listSig = sig;
   const box = $('view'), st = box.scrollTop; box.replaceChildren();
   if (!gs.length) return box.append(empty(q ? 'لا نتائج.' : delOnly ? 'لا توجد حالات محذوفة حتى الآن.' : 'لا توجد حالات محفوظة بعد. ستُحفظ فور ظهورها.'));
+  box.append(el('div', 'sec', delOnly ? 'حالات تم حذفها' : 'التحديثات الأخيرة'));
   gs.forEach((g, gi) => {
     const sub = delOnly ? '❌ حُذفت ' + DT(g.last.deletedAt) : day(g.last.ts) + '، ' + T(g.last.ts);
-    const r = row(avatar(g.name, 50, g.deleted ? 'd' : ''), g.name, sub, delOnly, '', g.items.length > 1 ? g.items.length + ' حالات' : '');
-    r.querySelector('.badge')?.setAttribute('style', 'background:var(--head)');
+    const r = row(ringAvatar(g.name, 48, g.items.length, delOnly || g.deleted === g.items.length), g.name, sub, delOnly, '', g.deleted && !delOnly ? '❌ ' + g.deleted : '');
     r.onclick = () => openViewer(gs, gi);
     box.append(r);
   });
   box.scrollTop = st;
 }
 
-// ---------- المحادثة (تحديث تدريجي بدون إعادة رسم) ----------
+// ---------- المحادثة (تحديث تدريجي) ----------
 function dayEl(ts) { const d = el('div', 'day', day(ts)); d.dataset.ts = ts; return d; }
 function stickBottom() { if (th && th.settle) { const b = $('thread'); b.scrollTop = b.scrollHeight; } }
+const runKey = m => m.fromMe ? 'me' : m.sender;
 
-function msgNode(m, group) {
-  const d = el('div', 'msg' + (m.fromMe ? ' me' : ''));
-  if (!m.fromMe && group) { const w = el('div', 'who', m.senderName); w.style.color = col(m.sender); d.append(w); }
-  if (m.quoted) d.append(el('div', 'q', m.quoted));
+function msgNode(m, group, cont) {
+  const d = el('div', 'msg' + (m.fromMe ? ' me' : '') + (cont ? ' cont' : ''));
+  d._m = m;
+  if (!m.fromMe && group && !cont) { const w = el('div', 'who', m.senderName); w.style.color = col(m.sender); d.append(w); }
+  if (m.quoted) {
+    const qq = el('div', 'q');
+    if (m.quotedName) { const b = el('b', '', m.quotedName); b.style.color = col(m.quotedFrom); qq.append(b); }
+    qq.append(document.createTextNode(m.quoted)); d.append(qq);
+  }
   if (m.media) {
     const u = '/media/' + m.media;
     let n;
@@ -173,8 +220,12 @@ function msgNode(m, group) {
     else { n = el('a', '', '📎 ملف'); n.href = u; }
     d.append(n);
   } else if (LBL[m.type] && !m.text) d.append(el('div', 'txt', LBL[m.type] + ' (غير محفوظ)'));
-  if (m.text) d.append(el('div', 'txt', m.text));
-  d.append(el('div', 'meta', T(m.ts) + (m.fromMe ? ' ✓' : '')));
+  if (m.text) { const t = el('div', 'txt'); linkify(t, m.text); d.append(t); }
+  const meta = el('div', 'meta');
+  if (m.edited) meta.append(el('span', '', 'تم التعديل'));
+  meta.append(el('span', '', T(m.ts)));
+  if (m.fromMe) meta.append(el('span', 'tk', '✓✓'));
+  d.append(meta);
   if (m.deleted) markNode(d, m);
   return d;
 }
@@ -188,12 +239,13 @@ function olderBtn() {
   b.onclick = () => {
     const box = $('thread'), h0 = box.scrollHeight, t0 = box.scrollTop;
     const ns = Math.max(0, th.start - PAGE), frag = document.createDocumentFragment();
-    let last = null;
+    let last = null, pk = null;
     for (let i = ns; i < th.start; i++) {
-      const m = th.base[i];
-      if (!same(m.ts, last ?? 0) || last === null) { frag.append(dayEl(m.ts)); }
-      last = m.ts;
-      const n = msgNode(m, th.group); th.nodes.set(m.id, n); frag.append(n);
+      const m = th.base[i], newDay = last === null || !same(m.ts, last);
+      if (newDay) frag.append(dayEl(m.ts));
+      const n = msgNode(m, th.group, !newDay && pk === runKey(m));
+      last = m.ts; pk = runKey(m);
+      th.nodes.set(m.id, n); frag.append(n);
     }
     b.remove();
     const firstDay = box.querySelector('.day');
@@ -225,9 +277,10 @@ function drawChips(nDel) {
 function openChat(c, delOnly) {
   cur = c; only = delOnly; th = null;
   $('view').style.display = 'none'; $('tabs').style.display = 'none'; $('sbar').style.display = 'none';
-  $('fbar').style.display = 'flex'; $('fbar').replaceChildren();
+  $('fbar').style.display = 'flex'; $('fbar').replaceChildren(); $('ro').style.display = 'block';
   const box = $('thread'); box.style.display = 'flex'; box.replaceChildren();
-  setHeader(c.name, c.number || (c.jid.endsWith('@g.us') ? 'مجموعة' : ''), avatar(c.name, 38), true);
+  const g = c.jid.endsWith('@g.us');
+  setHeader(c.name, c.number || (g ? 'مجموعة' : ''), avatar(c.name, 38, g), true);
   loadThread();
 }
 
@@ -240,9 +293,9 @@ async function loadThread() {
   const list = only ? all.filter(m => m.deleted) : all;
   const box = $('thread');
 
-  if (!th) {                                   // أول عرض
+  if (!th) {
     box.replaceChildren();
-    th = { base: list, group: jid.endsWith('@g.us'), nodes: new Map(), known: new Set(list.map(m => m.id)), start: Math.max(0, list.length - PAGE), lastTs: null, settle: true };
+    th = { base: list, group: jid.endsWith('@g.us'), nodes: new Map(), known: new Set(list.map(m => m.id)), start: Math.max(0, list.length - PAGE), lastTs: null, pk: null, settle: true };
     if (!list.length) { th.emptyEl = empty(only ? 'لا توجد رسائل محذوفة في هذه المحادثة.' : 'لا توجد رسائل.'); box.append(th.emptyEl); }
     if (th.start > 0) box.append(olderBtn());
     for (let i = th.start; i < list.length; i++) appendMsg(list[i]);
@@ -250,13 +303,15 @@ async function loadThread() {
     setTimeout(() => { if (th) th.settle = false; }, 3500);
     return;
   }
-  // تحديث: أضف الجديد فقط وعلّم المحذوف دون لمس الباقي
-    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
   let added = false;
   for (const m of list) {
     const n = th.nodes.get(m.id);
-    if (n) { if (m.deleted && !n.classList.contains('del')) markNode(n, m); }
-    else if (!th.known.has(m.id)) { appendMsg(m); added = true; }
+    if (n) {
+      n._m = m;
+      if (m.deleted && !n.classList.contains('del')) markNode(n, m);
+      if (m.edited && !n.querySelector('.meta span[data-e]')) { const s = el('span', '', 'تم التعديل'); s.dataset.e = 1; n.querySelector('.meta').prepend(s); const t = n.querySelector('.txt'); if (t) { t.replaceChildren(); linkify(t, m.text); } }
+    } else if (!th.known.has(m.id)) { appendMsg(m); added = true; }
   }
   if (added && atBottom) box.scrollTop = box.scrollHeight;
 }
@@ -264,19 +319,40 @@ function appendMsg(m) {
   const box = $('thread');
   th.known.add(m.id);
   if (th.emptyEl) { th.emptyEl.remove(); th.emptyEl = null; }
-  if (th.lastTs === null || !same(th.lastTs, m.ts)) box.append(dayEl(m.ts));
-  th.lastTs = m.ts;
-  const n = msgNode(m, th.group); th.nodes.set(m.id, n); box.append(n);
+  const newDay = th.lastTs === null || !same(th.lastTs, m.ts);
+  if (newDay) box.append(dayEl(m.ts));
+  const n = msgNode(m, th.group, !newDay && th.pk === runKey(m));
+  th.lastTs = m.ts; th.pk = runKey(m);
+  th.nodes.set(m.id, n); box.append(n);
 }
 
-// عدم تقدّم التمرير التلقائي بعد لمس المستخدم، ومنع تشغيل أكثر من مقطع معًا
+// معلومات الرسالة (ضغطة مطولة)
+function showInfo(m) {
+  const c = $('sc'); c.replaceChildren(el('h3', '', 'معلومات الرسالة'));
+  const add = (k, v, red) => { const p = el('p'); const s = el('small', '', k); p.append(s, v); if (red) p.style.color = 'var(--red)'; c.append(p); };
+  add('المرسل', m.fromMe ? 'أنت' : m.senderName);
+  add('وقت الإرسال', FULL(m.ts));
+  if (m.deleted) add('وقت الحذف', FULL(m.deletedAt) + ' (بعد ' + Math.max(0, Math.round((m.deletedAt - m.ts) / 60000)) + ' دقيقة من إرسالها)', true);
+  if (m.edited && m.orig) add('النص الأصلي قبل التعديل', m.orig);
+  add('النوع', LBL[m.type] || 'نص');
+  $('sheet').style.display = 'flex';
+}
+$('sheet').onclick = e => { if (e.target.id === 'sheet') $('sheet').style.display = 'none'; };
+
 const tbox = $('thread');
 ['touchstart', 'wheel', 'pointerdown'].forEach(ev => tbox.addEventListener(ev, () => { if (th) th.settle = false; }, { passive: true }));
 tbox.addEventListener('scroll', () => { $('down').style.display = tbox.scrollHeight - tbox.scrollTop - tbox.clientHeight > 400 ? 'block' : 'none'; });
 tbox.addEventListener('play', e => tbox.querySelectorAll('audio,video').forEach(x => { if (x !== e.target) x.pause(); }), true);
 tbox.addEventListener('click', e => { if (e.target.tagName === 'IMG' && e.target.closest('.msg')) { $('lb').firstChild.src = e.target.src; $('lb').style.display = 'flex'; } });
+let hold = null;
+tbox.addEventListener('touchstart', e => {
+  const n = e.target.closest('.msg'); if (!n || ['AUDIO', 'VIDEO', 'A'].includes(e.target.tagName)) return;
+  clearTimeout(hold); hold = setTimeout(() => showInfo(n._m), 550);
+}, { passive: true });
+['touchmove', 'touchend', 'touchcancel'].forEach(ev => tbox.addEventListener(ev, () => clearTimeout(hold), { passive: true }));
+tbox.addEventListener('contextmenu', e => { const n = e.target.closest('.msg'); if (n) { e.preventDefault(); showInfo(n._m); } });
 $('lb').onclick = () => { $('lb').style.display = 'none'; };
-$('down').onclick = () => { tbox.scrollTo({ top: tbox.scrollHeight, behavior: 'smooth' }); };
+$('down').onclick = () => tbox.scrollTo({ top: tbox.scrollHeight, behavior: 'smooth' });
 
 // ---------- عارض الحالات ----------
 let vw = { gs: [], gi: 0, i: 0, t: null, paused: false, t0: 0 };
@@ -320,19 +396,62 @@ function showStatus(i) {
   }
 }
 $('x').onclick = closeViewer;
-const vc = $('vc');
-vc.addEventListener('pointerdown', () => { vw.paused = true; vw.t0 = Date.now(); vc.querySelector('video')?.pause(); });
-['pointerup', 'pointercancel'].forEach(ev => vc.addEventListener(ev, () => { vw.paused = false; vc.querySelector('video')?.play(); }));
-vc.addEventListener('click', e => {
+const vcEl = $('vc');
+vcEl.addEventListener('pointerdown', () => { vw.paused = true; vw.t0 = Date.now(); vcEl.querySelector('video')?.pause(); });
+['pointerup', 'pointercancel'].forEach(ev => vcEl.addEventListener(ev, () => { vw.paused = false; vcEl.querySelector('video')?.play(); }));
+vcEl.addEventListener('click', e => {
   if (Date.now() - vw.t0 > 300 || e.target.tagName === 'AUDIO') return;
   go(vw.i + (e.clientX < innerWidth / 2 ? 1 : -1));
 });
+
+// ---------- القائمة واستيراد جهات الاتصال ----------
+$('dots').onclick = e => { e.stopPropagation(); const m = $('menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
+document.addEventListener('click', () => { $('menu').style.display = 'none'; });
+$('m-imp').onclick = () => $('file').click();
+$('m-sync').onclick = async () => {
+  toast('جارٍ طلب الأسماء من واتساب...');
+  try { const r = await (await fetch('/api/resync', { method: 'POST' })).json(); toast(r.ok ? 'تم الطلب، انتظر دقيقة ثم حدّث الصفحة.' : 'تعذّرت المزامنة: ' + r.error + ' — استخدم استيراد vCard.'); }
+  catch { toast('تعذّر الاتصال بالخادم.'); }
+};
+function qpDecode(s) {
+  const b = [], enc = new TextEncoder();
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '=' && /^[0-9A-F]{2}$/i.test(s.slice(i + 1, i + 3))) { b.push(parseInt(s.slice(i + 1, i + 3), 16)); i += 2; }
+    else b.push(...enc.encode(s[i]));
+  }
+  return new TextDecoder().decode(new Uint8Array(b));
+}
+function parseVcf(txt) {
+  txt = txt.replace(/\r/g, '').replace(/=\n/g, '').replace(/\n[ \t]/g, '');
+  const out = [];
+  for (const card of txt.split(/BEGIN:VCARD/i).slice(1)) {
+    let fn = '', n = '', nums = [];
+    for (const line of card.split('\n')) {
+      const i = line.indexOf(':'); if (i < 0) continue;
+      const key = line.slice(0, i).toUpperCase(), base = key.split(';')[0];
+      const val = /QUOTED-PRINTABLE/.test(key) ? qpDecode(line.slice(i + 1)) : line.slice(i + 1);
+      if (base === 'FN') fn = val.trim();
+      else if (base === 'N') n = val.split(';').reverse().filter(Boolean).join(' ').trim();
+      else if (base === 'TEL' || base.endsWith('.TEL')) nums.push(val.replace(/[^\d+]/g, ''));
+    }
+    if ((fn || n) && nums.length) out.push({ name: fn || n, nums });
+  }
+  return out;
+}
+$('file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const list = parseVcf(await f.text());
+  if (!list.length) return toast('لم أجد جهات اتصال في الملف.');
+  const r = await (await fetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list }) })).json();
+  toast('تم استيراد ' + r.count + ' جهة اتصال ✅'); e.target.value = '';
+  listSig = null; if (cur) { th = null; loadThread(); } renderCurrent(); loadStatus();
+};
 
 // ---------- عام ----------
 function show() {
   drawTabs();
   $('view').style.display = 'block'; $('tabs').style.display = 'flex'; $('sbar').style.display = 'block';
-  $('thread').style.display = 'none'; $('fbar').style.display = 'none'; $('down').style.display = 'none';
+  $('thread').style.display = 'none'; $('fbar').style.display = 'none'; $('down').style.display = 'none'; $('ro').style.display = 'none';
   setHeader('أرشيف واتساب', '', null, false);
   listSig = null; renderCurrent();
 }
@@ -353,7 +472,7 @@ async function loadStatus() {
       b.style.display = 'block';
     } else if (s.state === 'needs_phone') { b.textContent = 'شغّل التطبيق مع PHONE=رقمك لأول مرة.'; b.style.display = 'block'; }
     else if (s.state === 'starting') { b.textContent = 'جارٍ الاتصال...'; b.style.display = 'block'; }
-    else if (s.state === 'open' && s.contacts === 0) { b.textContent = 'جارٍ مزامنة أسماء جهات الاتصال... إن لم تظهر خلال دقائق فأعد ربط الجهاز.'; b.style.display = 'block'; }
+    else if (s.state === 'open' && s.contacts === 0 && s.imported === 0) { b.textContent = 'لم تصل أسماء جهات الاتصال بعد. اضغط ⋮ ثم «استيراد جهات الاتصال» لاستيرادها من هاتفك.'; b.style.display = 'block'; }
     else b.style.display = 'none';
   } catch { b.textContent = 'الخادم غير متصل.'; b.style.display = 'block'; }
 }

@@ -11,19 +11,36 @@ const status = { state: 'starting', code: null };
 const DATA = './data', MEDIA = `${DATA}/media`, DB_FILE = `${DATA}/db.json`;
 fs.mkdirSync(MEDIA, { recursive: true });
 
-let db = fs.existsSync(DB_FILE)
-  ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8'))
-  : { messages: {}, names: {} };
+let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
+db.messages ||= {}; db.names ||= {}; db.contacts ||= {}; db.alias ||= {};
 let timer;
 const save = () => {
   clearTimeout(timer);
   timer = setTimeout(() => fs.writeFileSync(DB_FILE, JSON.stringify(db)), 1500);
 };
 
+const norm = (j) => (j || '').replace(/:\d+@/, '@');
 const WRAPPERS = ['ephemeralMessage', 'viewOnceMessage', 'viewOnceMessageV2', 'documentWithCaptionMessage'];
 const unwrap = (m) => {
   for (let w = WRAPPERS.find(k => m?.[k]); w; w = WRAPPERS.find(k => m?.[k])) m = m[w].message;
   return m;
+};
+
+// ---- أسماء جهات الاتصال المحفوظة عندك ----
+function setContact(c) {
+  if (!c?.id) return;
+  if (c.notify) db.names[norm(c.id)] ||= c.notify;
+  const n = c.name || c.verifiedName;
+  if (!n) return;
+  for (const k of [c.id, c.lid, c.phoneNumber]) if (k) db.contacts[norm(k)] = n;
+  save();
+}
+const nameOf = (jid) =>
+  db.contacts[jid] || db.contacts[db.alias[jid]] || db.names[jid] || db.names[db.alias[jid]] ||
+  (jid === 'status@broadcast' ? 'الحالات' : jid.split('@')[0]);
+const numberOf = (jid) => {
+  const pn = [jid, db.alias[jid]].find(j => j?.endsWith('@s.whatsapp.net'));
+  return pn ? '+' + pn.split('@')[0] : '';
 };
 
 function markDeleted(id) {
@@ -32,7 +49,7 @@ function markDeleted(id) {
 }
 
 async function store(sock, m) {
-  const jid = m.key.remoteJid;
+  const jid = norm(m.key.remoteJid);
   if (!jid || !m.message) return;
   const msg = unwrap(m.message);
   if (msg.protocolMessage) {
@@ -43,19 +60,22 @@ async function store(sock, m) {
   const type = Object.keys(msg).find(k => k !== 'messageContextInfo');
   if (!type) return;
   const body = msg[type];
+  const sender = norm(m.key.participant || jid);
+  const alt = norm(m.key.remoteJidAlt), pAlt = norm(m.key.participantAlt);
+  if (alt && alt !== jid) { db.alias[jid] = alt; db.alias[alt] = jid; }
+  if (pAlt && pAlt !== sender) { db.alias[sender] = pAlt; db.alias[pAlt] = sender; }
   const rec = {
-    id: m.key.id, chat: jid, fromMe: !!m.key.fromMe,
-    sender: m.key.participant || jid,
+    id: m.key.id, chat: jid, fromMe: !!m.key.fromMe, sender,
     text: msg.conversation || body?.text || body?.caption || '',
     type, ts: Number(m.messageTimestamp) * 1000 || Date.now(),
     media: null, deleted: false,
     bg: body?.backgroundArgb ?? null,
     quoted: (() => { const q = body?.contextInfo?.quotedMessage; const u = q && unwrap(q); return u?.conversation || u?.extendedTextMessage?.text || ''; })()
   };
+  if (m.pushName && !rec.fromMe) db.names[sender] ||= m.pushName;
   if (jid.endsWith('@g.us') && !db.names[jid]) {
     try { db.names[jid] = (await sock.groupMetadata(jid)).subject; } catch {}
   }
-  if (m.pushName && !rec.fromMe) db.names[rec.sender] = m.pushName;
   if (/^(image|video|audio|document|sticker)Message$/.test(type)) {
     try {
       const buf = await downloadMediaMessage(m, 'buffer', {}, { logger: log, reuploadRequest: sock.updateMediaMessage });
@@ -78,7 +98,7 @@ async function start() {
 
   if (!sock.authState.creds.registered) {
     const phone = (process.env.PHONE || '').replace(/\D/g, '');
-    if (!phone) { status.state = 'needs_phone'; console.log('أضف السر PHONE في إعدادات Codespaces أو شغّل: PHONE=9665XXXXXXXX node server.js'); return; }
+    if (!phone) { status.state = 'needs_phone'; console.log('شغّل: PHONE=رقمك node server.js'); return; }
     setTimeout(async () => {
       try {
         status.code = await sock.requestPairingCode(phone);
@@ -89,7 +109,12 @@ async function start() {
   }
 
   sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
-    if (connection === 'open') { status.state = 'open'; status.code = null; console.log('✅ متصل ويحفظ الرسائل'); }
+    if (connection === 'open') {
+      status.state = 'open'; status.code = null; console.log('✅ متصل ويحفظ الرسائل');
+      setTimeout(() => sock.resyncAppState(
+        ['critical_unblock_low', 'regular_low', 'regular_high', 'regular', 'critical_block'], true
+      ).catch(e => console.log('مزامنة الأسماء:', e.message)), 5000);
+    }
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
       if (code === DisconnectReason.loggedOut) {
@@ -101,6 +126,9 @@ async function start() {
     }
   });
 
+  sock.ev.on('contacts.upsert', cs => cs.forEach(setContact));
+  sock.ev.on('contacts.update', cs => cs.forEach(setContact));
+  sock.ev.on('messaging-history.set', ({ contacts }) => (contacts || []).forEach(setContact));
   sock.ev.on('messages.upsert', async ({ messages }) => {
     for (const m of messages) await store(sock, m).catch(e => console.log(e.message));
   });
@@ -114,15 +142,13 @@ const app = express();
 app.use(express.static('public'));
 app.use('/media', express.static(MEDIA));
 
-const nameOf = (jid) => db.names[jid] || (jid === 'status@broadcast' ? 'الحالات' : jid.split('@')[0]);
-
-app.get('/api/status', (_, res) => res.json(status));
+app.get('/api/status', (_, res) => res.json({ ...status, contacts: Object.keys(db.contacts).length }));
 
 app.get('/api/chats', (req, res) => {
   const chats = {};
   for (const m of Object.values(db.messages)) {
     if (m.chat === 'status@broadcast') continue;
-    const c = chats[m.chat] ||= { jid: m.chat, name: nameOf(m.chat), last: m, deleted: 0, lastDeleted: null };
+    const c = chats[m.chat] ||= { jid: m.chat, name: nameOf(m.chat), number: numberOf(m.chat), last: m, deleted: 0, lastDeleted: null };
     if (m.ts > c.last.ts) c.last = m;
     if (m.deleted) {
       c.deleted++;

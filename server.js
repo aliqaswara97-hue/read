@@ -48,8 +48,13 @@ async function store(sock, m) {
     sender: m.key.participant || jid,
     text: msg.conversation || body?.text || body?.caption || '',
     type, ts: Number(m.messageTimestamp) * 1000 || Date.now(),
-    media: null, deleted: false
+    media: null, deleted: false,
+    bg: body?.backgroundArgb ?? null,
+    quoted: (() => { const q = body?.contextInfo?.quotedMessage; const u = q && unwrap(q); return u?.conversation || u?.extendedTextMessage?.text || ''; })()
   };
+  if (jid.endsWith('@g.us') && !db.names[jid]) {
+    try { db.names[jid] = (await sock.groupMetadata(jid)).subject; } catch {}
+  }
   if (m.pushName && !rec.fromMe) db.names[rec.sender] = m.pushName;
   if (/^(image|video|audio|document|sticker)Message$/.test(type)) {
     try {
@@ -113,14 +118,38 @@ const nameOf = (jid) => db.names[jid] || (jid === 'status@broadcast' ? 'الحا
 
 app.get('/api/status', (_, res) => res.json(status));
 
-app.get('/api/chats', (_, res) => {
+app.get('/api/chats', (req, res) => {
   const chats = {};
   for (const m of Object.values(db.messages)) {
-    const c = chats[m.chat] ||= { jid: m.chat, name: nameOf(m.chat), last: m, deleted: 0 };
+    if (m.chat === 'status@broadcast') continue;
+    const c = chats[m.chat] ||= { jid: m.chat, name: nameOf(m.chat), last: m, deleted: 0, lastDeleted: null };
     if (m.ts > c.last.ts) c.last = m;
-    if (m.deleted) c.deleted++;
+    if (m.deleted) {
+      c.deleted++;
+      if (!c.lastDeleted || m.deletedAt > c.lastDeleted.deletedAt) c.lastDeleted = m;
+    }
   }
-  res.json(Object.values(chats).sort((a, b) => b.last.ts - a.last.ts));
+  let list = Object.values(chats);
+  if (req.query.deleted === '1') list = list.filter(c => c.deleted).sort((a, b) => b.lastDeleted.deletedAt - a.lastDeleted.deletedAt);
+  else list.sort((a, b) => b.last.ts - a.last.ts);
+  res.json(list);
+});
+
+app.get('/api/statuses', (req, res) => {
+  const only = req.query.deleted === '1';
+  const g = {};
+  for (const m of Object.values(db.messages)) {
+    if (m.chat !== 'status@broadcast' || (only && !m.deleted)) continue;
+    const k = m.fromMe ? 'me' : m.sender;
+    (g[k] ||= { sender: k, name: m.fromMe ? 'حالتي' : nameOf(m.sender), items: [] }).items.push(m);
+  }
+  const out = Object.values(g).map(x => {
+    x.items.sort((a, b) => a.ts - b.ts);
+    x.last = x.items[x.items.length - 1];
+    x.deleted = x.items.filter(i => i.deleted).length;
+    return x;
+  }).sort((a, b) => b.last.ts - a.last.ts);
+  res.json(out);
 });
 
 app.get('/api/chat', (req, res) => {

@@ -5,110 +5,245 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>أرشيف واتساب</title>
 <style>
-:root{--bg:#f0f2f5;--panel:#fff;--text:#111b21;--sub:#667781;--me:#d9fdd3;--them:#fff;--del:#fde8e8;--delb:#d93025;--line:#e9edef;--head:#075e54}
-@media(prefers-color-scheme:dark){:root{--bg:#0b141a;--panel:#111b21;--text:#e9edef;--sub:#8696a0;--me:#005c4b;--them:#202c33;--del:#4a2326;--delb:#ff6b6b;--line:#222d34;--head:#202c33}}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
-header{background:var(--head);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;font-weight:600}
-header button{background:none;border:0;color:#fff;font-size:22px;cursor:pointer;display:none}
+:root{--head:#008069;--bg:#efeae2;--panel:#fff;--text:#111b21;--sub:#667781;--me:#d9fdd3;--them:#fff;--line:#e9edef;--red:#d93025;--reddim:#fde8e8;--green:#25d366}
+@media(prefers-color-scheme:dark){:root{--head:#1f2c34;--bg:#0b141a;--panel:#111b21;--text:#e9edef;--sub:#8696a0;--me:#005c4b;--them:#202c33;--line:#222d34;--red:#ff6b6b;--reddim:#3b2024}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--panel);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
 #app{display:flex;flex-direction:column;height:100%}
-#list,#thread{flex:1;overflow-y:auto}
-#thread{display:none;flex-direction:column;gap:6px;padding:10px;direction:ltr}
-.chat{display:flex;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);cursor:pointer}
-.chat b{display:block}.chat small{color:var(--sub);display:block;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.badge{color:var(--delb);font-size:12px;white-space:nowrap}
-.msg{max-width:82%;padding:7px 10px;border-radius:10px;background:var(--them);direction:rtl;word-break:break-word}
+header{background:var(--head);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;min-height:56px}
+header .t{font-size:17px;font-weight:600;line-height:1.2}header .s{font-size:12px;opacity:.8}
+#back{background:none;border:0;color:#fff;font-size:24px;display:none;padding:0 4px}
+nav{background:var(--head);display:flex}
+nav button{flex:1;background:none;border:0;color:#ffffffaa;padding:11px 2px;font-size:13px;font-weight:600;border-bottom:3px solid transparent}
+nav button.on{color:#fff;border-color:#fff}
+#view{flex:1;overflow-y:auto;background:var(--panel)}
+#thread{flex:1;overflow-y:auto;background:var(--bg);display:none;flex-direction:column;gap:3px;padding:8px 10px;direction:ltr}
+.av{border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
+.ring{border-radius:50%;padding:3px;border:3px solid var(--green);flex:none}.ring.d{border-color:var(--red)}
+.row{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer}
+.row .m{flex:1;min-width:0;border-bottom:1px solid var(--line);padding-bottom:10px}
+.row .n{font-weight:600;font-size:16px}
+.row .p{color:var(--sub);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .p.r{color:var(--red)}
+.row .e{text-align:end;font-size:12px;color:var(--sub);white-space:nowrap}
+.badge{display:inline-block;background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:12px;margin-top:4px}
+.chips{display:flex;gap:8px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.chip{padding:5px 14px;border-radius:16px;border:1px solid var(--line);background:none;color:var(--text);font-size:13px}
+.chip.on{background:var(--head);color:#fff;border-color:var(--head)}
+.day{align-self:center;background:var(--them);color:var(--sub);font-size:12px;padding:3px 10px;border-radius:8px;margin:8px 0;direction:rtl}
+.msg{max-width:84%;padding:6px 9px 4px;border-radius:9px;background:var(--them);direction:rtl;word-break:break-word;box-shadow:0 1px 1px #0002}
 .msg.me{align-self:flex-end;background:var(--me)}.msg:not(.me){align-self:flex-start}
-.msg.del{background:var(--del);border:1px solid var(--delb)}
-.who{font-size:12px;color:var(--sub);margin-bottom:2px}
-.txt{unicode-bidi:plaintext;white-space:pre-wrap}
-.meta{font-size:11px;color:var(--sub);margin-top:3px}
-.delmark{font-size:12px;color:var(--delb);font-weight:600;margin-top:4px}
+.msg.del{border:1px solid var(--red);background:var(--reddim)}
+.who{font-size:13px;font-weight:600;margin-bottom:2px}
+.q{border-inline-start:4px solid var(--head);background:#0001;border-radius:6px;padding:4px 8px;font-size:13px;color:var(--sub);margin-bottom:4px}
+.txt{unicode-bidi:plaintext;white-space:pre-wrap;font-size:15px}
+.meta{font-size:11px;color:var(--sub);text-align:end;margin-top:2px}
+.dm{font-size:12px;color:var(--red);font-weight:600;margin-top:3px}
 .msg img,.msg video{max-width:100%;border-radius:6px;display:block;margin-bottom:4px}
+.msg audio{max-width:100%}
+.empty{padding:50px 24px;text-align:center;color:var(--sub);line-height:1.8}
 .banner{background:#fff3cd;color:#664d03;padding:12px 16px;text-align:center;display:none;line-height:1.7}.banner b{font-size:24px;letter-spacing:3px;direction:ltr;display:block}
-.empty{padding:40px 20px;text-align:center;color:var(--sub)}
+#viewer{position:fixed;inset:0;background:#000;z-index:50;display:none;flex-direction:column;color:#fff;direction:rtl}
+#bars{display:flex;gap:3px;padding:10px 8px 6px}#bars div{flex:1;height:3px;background:#ffffff55;border-radius:2px;overflow:hidden}#bars i{display:block;height:100%;width:0;background:#fff}
+#vh{display:flex;align-items:center;gap:10px;padding:4px 12px}
+#vc{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+#vc img,#vc video{max-width:100%;max-height:100%}
+#vc .tx{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;font-size:26px;unicode-bidi:plaintext;white-space:pre-wrap}
+#cap{padding:12px 16px 24px;text-align:center;background:linear-gradient(transparent,#000a);unicode-bidi:plaintext;min-height:40px}
+.tag{background:var(--red);color:#fff;font-size:12px;padding:3px 10px;border-radius:10px;display:inline-block;margin:4px 0}
+#x{background:none;border:0;color:#fff;font-size:26px}
 </style>
 </head>
 <body>
 <div id="app">
-  <header><button id="back" aria-label="رجوع">→</button><span id="title">أرشيف واتساب</span></header>
+  <header><button id="back" aria-label="رجوع">→</button><div id="hav"></div><div><div class="t" id="title">أرشيف واتساب</div><div class="s" id="subt"></div></div></header>
+  <nav id="tabs"></nav>
   <div id="banner" class="banner"></div>
-  <div id="list"></div>
+  <div id="view"></div>
   <div id="thread"></div>
+</div>
+<div id="viewer">
+  <div id="bars"></div>
+  <div id="vh"><button id="x">✕</button><div id="vav"></div><div><b id="vn"></b><div id="vt" style="font-size:12px;opacity:.8"></div></div></div>
+  <div id="vc"></div>
+  <div id="cap"></div>
 </div>
 <script>
 const $ = id => document.getElementById(id);
-const fmt = ts => new Date(ts).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' });
-let current = null;
+const TABS = [['chats','المحادثات'],['delmsgs','رسائل محذوفة'],['status','الحالات'],['delstatus','حالات محذوفة']];
+const COLORS = ['#1fa855','#128c7e','#d9534f','#e67e22','#8e44ad','#2980b9','#c0392b','#16a085','#d35400','#7f8c8d'];
+const col = s => COLORS[[...String(s)].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length];
+const T = ts => new Date(ts).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+const D = ts => new Date(ts).toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' });
+const same = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+const day = ts => same(ts, Date.now()) ? 'اليوم' : same(ts, Date.now() - 864e5) ? 'أمس' : D(ts);
+const DT = ts => day(ts) + '، ' + T(ts);
+const LBL = { imageMessage: '📷 صورة', videoMessage: '🎥 فيديو', audioMessage: '🎤 رسالة صوتية', documentMessage: '📄 مستند', stickerMessage: 'ملصق' };
+const prev = m => m.text || LBL[m.type] || 'رسالة';
+let tab = 'chats', cur = null, only = false;
 
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function avatar(name, size, ringCls) {
+  const a = el('div', 'av', ([...String(name).replace(/[^\p{L}\p{N}]/gu, '')][0] || '؟').toUpperCase());
+  a.style.cssText = `width:${size}px;height:${size}px;background:${col(name)};font-size:${size * .42}px`;
+  if (!ringCls && ringCls !== '') return a;
+  const r = el('div', 'ring ' + ringCls); r.append(a); return r;
 }
+function row(av, title, sub, subRed, e1, e2) {
+  const r = el('div', 'row'), m = el('div', 'm'), e = el('div', 'e');
+  m.append(el('div', 'n', title), el('div', 'p' + (subRed ? ' r' : ''), sub));
+  if (e1) e.append(el('div', '', e1));
+  if (e2) e.append(el('span', 'badge', e2));
+  r.append(av, m, e); return r;
+}
+const empty = t => el('div', 'empty', t);
 
-async function loadList() {
-  const chats = await (await fetch('/api/chats')).json();
-  const box = $('list');
-  box.replaceChildren();
-  if (!chats.length) box.append(el('div', 'empty', 'لا توجد رسائل بعد. ستظهر هنا فور وصولها.'));
-  for (const c of chats) {
-    const row = el('div', 'chat');
-    const left = el('div');
-    left.append(el('b', '', c.name), el('small', '', c.last.text || '[' + c.last.type.replace('Message', '') + ']'));
-    const right = el('div');
-    right.append(el('small', '', fmt(c.last.ts)));
-    if (c.deleted) right.append(el('div', 'badge', '❌ ' + c.deleted + ' محذوفة'));
-    row.append(left, right);
-    row.onclick = () => openChat(c);
-    box.append(row);
+function setHeader(title, sub, av, back) {
+  $('title').textContent = title; $('subt').textContent = sub || '';
+  $('hav').replaceChildren(...(av ? [av] : []));
+  $('back').style.display = back ? 'block' : 'none';
+}
+function drawTabs() {
+  const n = $('tabs'); n.replaceChildren();
+  for (const [k, t] of TABS) {
+    const b = el('button', k === tab ? 'on' : '', t);
+    b.onclick = () => { tab = k; cur = null; show(); };
+    n.append(b);
   }
 }
 
-function mediaNode(m) {
-  const url = '/media/' + m.media;
-  if (m.type === 'imageMessage' || m.type === 'stickerMessage') { const i = el('img'); i.src = url; return i; }
-  if (m.type === 'videoMessage') { const v = el('video'); v.src = url; v.controls = true; return v; }
-  if (m.type === 'audioMessage') { const a = el('audio'); a.src = url; a.controls = true; return a; }
-  const a = el('a', '', '📎 ملف'); a.href = url; return a;
+async function renderChats(delOnly) {
+  const chats = await (await fetch('/api/chats' + (delOnly ? '?deleted=1' : ''))).json();
+  const box = $('view'), st = box.scrollTop; box.replaceChildren();
+  if (!chats.length) return box.append(empty(delOnly ? 'لا توجد رسائل محذوفة حتى الآن.' : 'لا توجد رسائل بعد. ستظهر هنا فور وصولها.'));
+  for (const c of chats) {
+    const lm = delOnly ? c.lastDeleted : c.last;
+    const r = row(avatar(c.name, 50), c.name,
+      delOnly ? '❌ ' + prev(lm) : prev(lm), delOnly,
+      delOnly ? DT(lm.deletedAt) : (same(lm.ts, Date.now()) ? T(lm.ts) : day(lm.ts)),
+      c.deleted ? '❌ ' + c.deleted : '');
+    r.onclick = () => openChat(c, delOnly);
+    box.append(r);
+  }
+  box.scrollTop = st;
 }
 
-async function loadThread() {
-  const msgs = await (await fetch('/api/chat?jid=' + encodeURIComponent(current.jid))).json();
+async function renderStatus(delOnly) {
+  const gs = await (await fetch('/api/statuses' + (delOnly ? '?deleted=1' : ''))).json();
+  const box = $('view'), st = box.scrollTop; box.replaceChildren();
+  if (!gs.length) return box.append(empty(delOnly ? 'لا توجد حالات محذوفة حتى الآن.' : 'لا توجد حالات محفوظة بعد. ستُحفظ فور ظهورها.'));
+  for (const g of gs) {
+    const sub = delOnly ? '❌ حُذفت ' + DT(g.last.deletedAt) : day(g.last.ts) + '، ' + T(g.last.ts);
+    const r = row(avatar(g.name, 50, g.deleted ? 'd' : ''), g.name, sub, delOnly, '', g.items.length > 1 ? g.items.length + ' حالات' : '');
+    r.querySelector('.badge')?.setAttribute('style', 'background:var(--head)');
+    r.onclick = () => openViewer(g);
+    box.append(r);
+  }
+  box.scrollTop = st;
+}
+
+function msgNode(m, group) {
+  const d = el('div', 'msg' + (m.fromMe ? ' me' : '') + (m.deleted ? ' del' : ''));
+  if (!m.fromMe && group) { const w = el('div', 'who', m.senderName); w.style.color = col(m.sender); d.append(w); }
+  if (m.quoted) d.append(el('div', 'q', m.quoted));
+  if (m.media) {
+    const u = '/media/' + m.media;
+    let n;
+    if (m.type === 'imageMessage' || m.type === 'stickerMessage') { n = el('img'); n.src = u; }
+    else if (m.type === 'videoMessage') { n = el('video'); n.src = u; n.controls = true; }
+    else if (m.type === 'audioMessage') { n = el('audio'); n.src = u; n.controls = true; }
+    else { n = el('a', '', '📎 ملف'); n.href = u; }
+    d.append(n);
+  } else if (LBL[m.type] && !m.text) d.append(el('div', 'txt', LBL[m.type] + ' (غير محفوظ)'));
+  if (m.text) d.append(el('div', 'txt', m.text));
+  d.append(el('div', 'meta', T(m.ts) + (m.fromMe ? ' ✓' : '')));
+  if (m.deleted) d.append(el('div', 'dm', '❌ حُذفت • ' + DT(m.deletedAt)));
+  return d;
+}
+
+function openChat(c, delOnly) {
+  cur = c; only = delOnly;
+  $('view').style.display = 'none'; $('tabs').style.display = 'none';
+  $('thread').style.display = 'flex';
+  setHeader(c.name, c.jid.endsWith('@g.us') ? 'مجموعة' : '', avatar(c.name, 38), true);
+  loadThread(true);
+}
+
+async function loadThread(first) {
+  if (!cur) return;
+  const all = await (await fetch('/api/chat?jid=' + encodeURIComponent(cur.jid))).json();
+  const group = cur.jid.endsWith('@g.us');
+  const nDel = all.filter(m => m.deleted).length;
+  const list = only ? all.filter(m => m.deleted) : all;
   const box = $('thread');
-  const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const atEnd = first || box.scrollHeight - box.scrollTop - box.clientHeight < 80;
   box.replaceChildren();
-  for (const m of msgs) {
-    const d = el('div', 'msg' + (m.fromMe ? ' me' : '') + (m.deleted ? ' del' : ''));
-    if (!m.fromMe && (current.jid.endsWith('@g.us') || current.jid === 'status@broadcast')) d.append(el('div', 'who', m.senderName));
-    if (m.media) d.append(mediaNode(m));
-    if (m.text) d.append(el('div', 'txt', m.text));
-    d.append(el('div', 'meta', fmt(m.ts)));
-    if (m.deleted) d.append(el('div', 'delmark', '❌ حُذفت في ' + fmt(m.deletedAt)));
-    box.append(d);
+  const chips = el('div', 'chips'); chips.style.direction = 'rtl';
+  for (const [v, t] of [[false, 'الكل'], [true, '❌ المحذوفة فقط (' + nDel + ')']]) {
+    const b = el('button', 'chip' + (only === v ? ' on' : ''), t);
+    b.onclick = () => { only = v; loadThread(true); };
+    chips.append(b);
+  }
+  box.append(chips);
+  if (!list.length) box.append(empty('لا توجد رسائل محذوفة في هذه المحادثة.'));
+  let last = null;
+  for (const m of list) {
+    const k = new Date(m.ts).toDateString();
+    if (k !== last) { box.append(el('div', 'day', day(m.ts))); last = k; }
+    box.append(msgNode(m, group));
   }
   if (atEnd) box.scrollTop = box.scrollHeight;
 }
 
-async function openChat(c) {
-  current = c;
-  $('title').textContent = c.name;
-  $('back').style.display = 'block';
-  $('list').style.display = 'none';
-  $('thread').style.display = 'flex';
-  await loadThread();
-  $('thread').scrollTop = $('thread').scrollHeight;
+// ---- عارض الحالات ----
+let vw = { items: [], i: 0, t: null };
+function openViewer(g) { vw = { items: g.items, i: 0, t: null, g }; $('viewer').style.display = 'flex'; showStatus(0); }
+function closeViewer() { clearInterval(vw.t); $('viewer').style.display = 'none'; $('vc').replaceChildren(); }
+function showStatus(i) {
+  clearInterval(vw.t);
+  if (i < 0) i = 0;
+  if (i >= vw.items.length) return closeViewer();
+  vw.i = i;
+  const m = vw.items[i], bars = $('bars');
+  bars.replaceChildren();
+  vw.items.forEach((_, k) => { const b = el('div'), f = el('i'); f.style.width = k < i ? '100%' : '0'; b.append(f); bars.append(b); });
+  const fill = bars.children[i].firstChild;
+  $('vav').replaceChildren(avatar(vw.g.name, 38));
+  $('vn').textContent = vw.g.name;
+  $('vt').textContent = DT(m.ts) + (m.deleted ? ' • ❌ حُذفت ' + DT(m.deletedAt) : '');
+  const vc = $('vc'); vc.replaceChildren();
+  let ms = 5000;
+  if (m.media && m.type === 'videoMessage') {
+    const v = el('video'); v.src = '/media/' + m.media; v.autoplay = true; v.playsInline = true;
+    v.onended = () => showStatus(i + 1); vc.append(v); ms = 0;
+  } else if (m.media && m.type === 'audioMessage') {
+    const a = el('audio'); a.src = '/media/' + m.media; a.controls = true; a.autoplay = true; a.onended = () => showStatus(i + 1); vc.append(a); ms = 0;
+  } else if (m.media) { const im = el('img'); im.src = '/media/' + m.media; vc.append(im); }
+  else {
+    const t = el('div', 'tx', m.text || '(حالة غير محفوظة)');
+    if (m.bg != null) t.style.background = '#' + ((m.bg >>> 0) & 0xFFFFFF).toString(16).padStart(6, '0');
+    vc.append(t);
+  }
+  const cap = $('cap'); cap.replaceChildren();
+  if (m.media && m.text) cap.append(el('div', '', m.text));
+  if (m.deleted) cap.append(el('div', 'tag', '❌ حُذفت في ' + DT(m.deletedAt)));
+  if (ms) {
+    let el0 = 0;
+    vw.t = setInterval(() => { el0 += 50; fill.style.width = Math.min(100, el0 / ms * 100) + '%'; if (el0 >= ms) showStatus(i + 1); }, 50);
+  }
 }
+$('x').onclick = closeViewer;
+$('vc').onclick = e => { const left = e.clientX < innerWidth / 2; showStatus(vw.i + (left ? 1 : -1)); };
 
-$('back').onclick = () => {
-  current = null;
-  $('title').textContent = 'أرشيف واتساب';
-  $('back').style.display = 'none';
-  $('thread').style.display = 'none';
-  $('list').style.display = 'block';
-  loadList();
-};
+function show() {
+  drawTabs();
+  $('view').style.display = 'block'; $('tabs').style.display = 'flex'; $('thread').style.display = 'none';
+  setHeader('أرشيف واتساب', '', null, false);
+  if (tab === 'chats') renderChats(false);
+  else if (tab === 'delmsgs') renderChats(true);
+  else renderStatus(tab === 'delstatus');
+}
+$('back').onclick = () => { cur = null; show(); };
 
 async function loadStatus() {
   const b = $('banner');
@@ -117,18 +252,18 @@ async function loadStatus() {
     if (s.state === 'pairing' && s.code) {
       b.replaceChildren('أدخل هذا الكود في واتساب: الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف', el('b', '', s.code));
       b.style.display = 'block';
-    } else if (s.state === 'needs_phone') {
-      b.textContent = 'أضف رقم هاتفك كسر باسم PHONE في إعدادات Codespaces ثم أعد تشغيل الـ Codespace.';
-      b.style.display = 'block';
-    } else if (s.state === 'starting') {
-      b.textContent = 'جارٍ الاتصال...'; b.style.display = 'block';
-    } else b.style.display = 'none';
+    } else if (s.state === 'needs_phone') { b.textContent = 'شغّل التطبيق مع PHONE=رقمك لأول مرة.'; b.style.display = 'block'; }
+    else if (s.state === 'starting') { b.textContent = 'جارٍ الاتصال...'; b.style.display = 'block'; }
+    else b.style.display = 'none';
   } catch { b.textContent = 'الخادم غير متصل.'; b.style.display = 'block'; }
 }
-loadList();
-loadStatus();
-setInterval(loadStatus, 4000);
-setInterval(() => current ? loadThread() : loadList(), 4000);
+
+show(); loadStatus();
+setInterval(loadStatus, 5000);
+setInterval(() => {
+  if ($('viewer').style.display === 'flex') return;
+  if (cur) loadThread(false); else show();
+}, 6000);
 </script>
 </body>
 </html>

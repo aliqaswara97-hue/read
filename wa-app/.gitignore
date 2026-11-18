@@ -1,0 +1,6 @@
+node_modules/
+app/libnode/
+app/build/
+build/
+.gradle/
+app/src/main/assets/main.js

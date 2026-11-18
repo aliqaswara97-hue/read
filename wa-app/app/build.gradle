@@ -1,0 +1,26 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.waarchiver'
+    compileSdk 34
+    ndkVersion '26.1.10909125'
+    defaultConfig {
+        applicationId 'com.waarchiver'
+        minSdk 29
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
+        externalNativeBuild { cmake { cppFlags '-std=c++17'; arguments '-DANDROID_STL=c++_shared' } }
+    }
+    externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'; version '3.22.1' } }
+    signingConfigs {
+        debug {
+            storeFile file('release-key.p12')
+            storePassword 'android'
+            keyAlias 'key0'
+            keyPassword 'android'
+            storeType 'pkcs12'
+        }
+    }
+    sourceSets { main { jniLibs.srcDirs = ['libnode/bin'] } }
+}

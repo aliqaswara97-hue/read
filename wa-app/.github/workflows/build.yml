@@ -1,0 +1,40 @@
+name: Build APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Bundle JS
+        working-directory: node-src
+        run: |
+          npm install
+          npx --yes esbuild@0.24.0 index.js --loader:.html=text --bundle --platform=node --format=cjs --target=node18 --outfile=../app/src/main/assets/main.js --external:sharp --external:jimp --external:link-preview-js --external:audio-decode --log-level=warning
+      - name: Download nodejs-mobile
+        run: |
+          curl -fL -o nm.zip https://github.com/nodejs-mobile/nodejs-mobile/releases/download/v18.20.4/nodejs-mobile-v18.20.4-android.zip
+          mkdir -p app/libnode
+          unzip -q nm.zip -d app/libnode
+          find app/libnode -maxdepth 3 | head -30
+          test -f app/libnode/bin/arm64-v8a/libnode.so
+          test -f app/libnode/include/node/node.h
+      - name: Android SDK parts
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "cmake;3.22.1" "ndk;26.1.10909125" > /dev/null
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+      - run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wa-archiver-apk
+          path: app/build/outputs/apk/debug/app-debug.apk

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WA Archiver</title>
+<style>
+:root{--bar:#008069;--bg:#fff;--text:#111b21;--sub:#667781;--line:#e9edef;--wall:#efeae2;--in:#fff;--out:#d9fdd3;--acc:#00a884;--hov:#f5f6f6}
+@media(prefers-color-scheme:dark){:root{--bar:#202c33;--bg:#111b21;--text:#e9edef;--sub:#8696a0;--line:#222d34;--wall:#0b141a;--in:#202c33;--out:#005c4b;--hov:#182229}}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+header{background:var(--bar);color:#fff;padding:0 8px;flex:none}
+.top{display:flex;align-items:center;gap:6px;height:52px}
+.top h1{font-size:20px;font-weight:600;flex:1;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ic{background:none;border:0;color:#fff;font-size:21px;padding:8px 10px}
+.tabs{display:flex}
+.tab{flex:1;background:none;border:0;border-bottom:3px solid transparent;color:#ffffffb3;font-weight:600;font-size:14px;padding:12px 0}
+.tab.on{color:#fff;border-bottom-color:#fff}
+#sbar{padding:8px 12px;border-bottom:1px solid var(--line);flex:none}
+#ban{background:#ffcc00;color:#000;font-size:13px;text-align:center;padding:5px;flex:none}
+main{flex:1;overflow-y:auto}
+.row{display:flex;gap:12px;padding:0 14px;align-items:center}
+.row:active{background:var(--hov)}
+.av{width:49px;height:49px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:600}
+.mid{flex:1;min-width:0;border-bottom:1px solid var(--line);padding:12px 0}
+.l1{display:flex;justify-content:space-between;gap:8px}
+.nm{font-size:16.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm{font-size:12px;color:var(--sub);flex:none}
+.pv{font-size:14px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.empty{padding:40px 24px;text-align:center;color:var(--sub);line-height:1.8}
+.wall{background:var(--wall);min-height:100%;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
+.b{max-width:84%;padding:6px 8px 4px;border-radius:8px;background:var(--in);box-shadow:0 1px .5px #0b141a22;font-size:14.5px;line-height:1.4;word-break:break-word}
+.b.me{background:var(--out);align-self:flex-end}.b.th{align-self:flex-start}
+.b div[dir]{white-space:pre-wrap}
+.t{font-size:11px;color:var(--sub);text-align:end;margin-top:2px}
+.sn{font-size:12.5px;font-weight:600;margin-bottom:2px}
+.b img,.b video{max-width:100%;max-height:340px;border-radius:6px;display:block}
+.b audio{max-width:100%}
+.ph{color:var(--sub);font-style:italic}
+.day{align-self:center;background:var(--in);color:var(--sub);font-size:12px;padding:4px 10px;border-radius:8px;margin:8px 0}
+.foot{background:var(--bg);color:var(--sub);font-size:12.5px;text-align:center;padding:10px;border-top:1px solid var(--line);flex:none}
+.link{padding:24px;text-align:center}
+.link h2{margin-bottom:8px}
+.sub{color:var(--sub);font-size:14px;line-height:1.7}
+.qr{background:#fff;width:260px;height:260px;margin:16px auto;border-radius:12px;padding:8px;display:flex;align-items:center;justify-content:center;color:#555}
+.qr svg{width:100%;height:100%}
+.in{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:16px}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:24px;padding:12px 22px;font-size:15px;font-weight:600;margin-top:12px}
+.code{font-size:30px;letter-spacing:3px;font-weight:700;margin:14px 0;direction:ltr}
+hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+#menu{position:absolute;top:46px;inset-inline-end:8px;background:var(--bg);color:var(--text);border-radius:8px;box-shadow:0 2px 12px #0005;z-index:9;min-width:180px}
+#menu button{display:block;width:100%;text-align:start;background:none;border:0;color:inherit;padding:14px 16px;font-size:15px}
+.b.dd{outline:1px solid #e5393566}.dl{font-size:12px;color:#e53935;margin-bottom:3px}.blur{filter:blur(2px)}.b a{color:var(--acc)}#lb{position:fixed;inset:0;background:#000e;display:flex;align-items:center;justify-content:center;z-index:20}#lb img{max-width:100%;max-height:100%}
+.qt{border-inline-start:3px solid var(--acc);background:#0000000d;border-radius:6px;padding:4px 8px;margin-bottom:4px;font-size:13px;color:var(--sub)}.qt b{color:var(--acc)}.ed{font-size:13px;margin-top:4px;border-top:1px dashed var(--line);padding-top:3px}.ed small{color:var(--sub)}#dg{position:fixed;inset:0;background:var(--bg);color:var(--text);z-index:30;overflow:auto;padding:16px}#dg pre{white-space:pre-wrap;font-size:11px;direction:ltr;color:var(--sub)}#dg td{padding:5px 8px 5px 0;vertical-align:top}
+</style></head><body>
+<header>
+ <div id="hMain">
+  <div class="top"><h1 id="ttl"></h1><button class="ic" id="bS">🔍</button><button class="ic" id="bM">⋮</button></div>
+  <div class="tabs"><button class="tab" data-a="wa">واتساب</button><button class="tab" data-a="biz">واتساب الأعمال</button></div>
+ </div>
+ <div id="hChat" hidden><div class="top"><button class="ic" id="bB">→</button><div class="av" id="cav" style="width:38px;height:38px;font-size:16px"></div><h1 id="cnm" style="font-size:17px"></h1><button class="ic" id="bX" title="تصدير">⬇</button></div></div>
+</header>
+<div id="sbar" hidden><input class="in" id="q" placeholder="بحث في الدردشات والرسائل"></div>
+<div id="ban" hidden>غير متصل بواتساب — جارٍ إعادة المحاولة (المحفوظ يبقى متاحًا)</div>
+<main id="main"></main>
+<div class="foot" id="foot" hidden>أرشيف للقراءة فقط</div>
+<div id="lb" hidden></div>
+<div id="dg" hidden></div>
+<div id="menu" hidden><button id="mDg">حالة الاتصال والتشخيص</button><button id="mSt">تشغيل/إيقاف حفظ الحالات (ستوري)</button><button id="mDel">الرسائل المحذوفة</button><button id="mExp">تصدير الرسائل إلى التنزيلات</button><button id="mOut">فصل الحساب</button></div>
+<script>
+let acc="wa",view="list",cur=null,S={accounts:{}},q="",lastKey="",delMode=false;
+const $=s=>document.querySelector(s);
+const api=async(p,o)=>{try{const r=await fetch(p,o);return await r.json()}catch(e){return null}};
+const post=(p,b)=>api(p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const NM={wa:"واتساب",biz:"واتساب الأعمال"};
+const COL=["#00a884","#53bdeb","#e26ab6","#ffa726","#7e57c2","#26a69a","#ef5350","#8d6e63"];
+const hue=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))|0;return COL[Math.abs(h)%COL.length]};
+const init=(n,g)=>g?"👥":([...String(n).replace(/^\+/,"")][0]||"?").toUpperCase();
+const fmtT=t=>t?new Date(t).toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"}):"";
+function fmtL(t){if(!t)return"";const d=new Date(t),n=new Date();const dd=(new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5;return dd<1?fmtT(t):dd<2?"أمس":d.toLocaleDateString("ar",{day:"numeric",month:"numeric",year:"2-digit"})}
+const LBL={imageMessage:"📷 صورة",videoMessage:"🎥 فيديو",audioMessage:"🎤 رسالة صوتية",documentMessage:"📄 ملف",stickerMessage:"ملصق",locationMessage:"📍 موقع",liveLocationMessage:"📍 موقع",contactMessage:"👤 جهة اتصال",contactsArrayMessage:"👤 جهات اتصال",pollCreationMessage:"📊 استطلاع"};
+const fmtD=t=>t?new Date(t).toLocaleString("ar",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+const prev=l=>l.type==="deletedPlaceholder"?"🚫 تم حذف هذه الرسالة":(l.del?"🚫 ":"")+(l.fromMe?"أنا: ":"")+(l.text||LBL[l.type]||"رسالة");
+
+function setHeader(){
+  const c=view==="chat";
+  $("#hMain").hidden=c;$("#hChat").hidden=!c;$("#foot").hidden=!c;
+  $("#ttl").textContent=NM[acc]+(delMode?" — المحذوفة":"");
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.a===acc));
+  if(c){$("#cnm").textContent=cur.name;$("#cav").textContent=init(cur.name,cur.group);$("#cav").style.background=hue(cur.jid)}
+}
+async function refresh(){
+  const s=await api("/api/state");if(s){S=s;if(!window._ok&&window.Android&&Android.ok){window._ok=1;Android.ok()}}
+  const A=S.accounts[acc];if(!A)return;
+  setHeader();
+  $("#ban").hidden=!(A.linked&&A.status!=="open");
+  if(!A.linked)return renderLink(A);
+  if(view==="chat")return renderChat();
+  return renderList(A);
+}
+function renderLink(A){
+  const m=$("#main");
+  if(m.dataset.v!=="link"+acc){
+    m.dataset.v="link"+acc;lastKey="";
+    m.innerHTML=`<div class="link"><h2>ربط ${NM[acc]}</h2>
+<p class="sub">من هاتف آخر: افتح ${NM[acc]} ← ⋮ ← الأجهزة المرتبطة ← ربط جهاز، ثم امسح الرمز</p>
+<div class="qr" id="qr">جارٍ التحميل…</div><hr>
+<p class="sub">أو من هذا الهاتف نفسه: اربط برقم الهاتف</p><br>
+<input class="in" id="ph" placeholder="9665XXXXXXXX" inputmode="tel" style="direction:ltr">
+<button class="btn" id="go">احصل على رمز الربط</button>
+<div class="code" id="code"></div><p class="sub" id="hint"></p></div>`;
+    $("#go").onclick=async()=>{
+      $("#hint").textContent="…";
+      const r=await post("/api/pair",{acc,phone:$("#ph").value});
+      if(r&&r.code){$("#code").textContent=r.code;$("#hint").textContent=`في ${NM[acc]}: الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف بدلًا من ذلك، ثم أدخل الرمز`}
+      else{$("#code").textContent="";$("#hint").textContent=(r&&r.error)||"فشل"}
+    };
+  }
+  if(A.status==="qr")api("/api/qr?acc="+acc).then(r=>{if(r&&r.svg&&r.svg!==lastKey){lastKey=r.svg;const e=$("#qr");if(e)e.innerHTML=r.svg}});
+}
+async function renderList(A){
+  const m=$("#main");
+  let rows,key;
+  if(delMode){
+    const r=await api(`/api/search?acc=${acc}&del=1`)||[];
+    key="d"+acc+JSON.stringify(r);
+    rows=r.map(c=>[c.jid,c.name,c.group,"🚫 "+(c.text||"رسالة")+"  ·  "+fmtD(c.time),fmtL(c.time)]);
+  }else if(q.length>=2){
+    const r=await api(`/api/search?acc=${acc}&q=${encodeURIComponent(q)}`)||[];
+    key="s"+acc+q+JSON.stringify(r);
+    rows=r.map(c=>[c.jid,c.name,c.group,c.text,fmtL(c.time)]);
+  }else{
+    const r=await api("/api/chats?acc="+acc)||[];
+    key="l"+acc+JSON.stringify(r);
+    rows=r.map(c=>[c.jid,c.name,c.group,prev(c.last),fmtL(c.last.time)]);
+  }
+  if(key===lastKey&&m.dataset.v==="list"+acc)return;
+  lastKey=key;m.dataset.v="list"+acc;
+  if(!rows.length){m.innerHTML=`<div class="empty">${delMode?"لا توجد رسائل محذوفة بعد":q.length>=2?"لا نتائج":"لا توجد دردشات محفوظة بعد.<br>الرسائل الجديدة ستظهر هنا تلقائيًا، والسجل القديم يصل بعد الربط بقليل."}</div>`;return}
+  m.innerHTML=rows.map((c,i)=>`<div class="row" data-i="${i}"><div class="av" style="background:${hue(c[0])}">${esc(init(c[1],c[2]))}</div><div class="mid"><div class="l1"><div class="nm">${esc(c[1])}</div><div class="tm">${c[4]}</div></div><div class="pv" dir="auto">${esc(c[3])}</div></div></div>`).join("");
+  m.querySelectorAll(".row").forEach(el=>el.onclick=()=>{const c=rows[el.dataset.i];openChat(c[0],c[1],c[2])});
+}
+function openChat(jid,name,group){cur={jid,name,group};view="chat";lastKey="";$("#sbar").hidden=true;$("#main").dataset.v="";renderChat(true)}
+async function renderChat(first){
+  if(!cur)return;
+  setHeader();
+  const ms=await api(`/api/messages?acc=${acc}&jid=${encodeURIComponent(cur.jid)}&limit=400`)||[];
+  const key="c"+cur.jid+ms.length+(ms.length?ms[ms.length-1].id:"")+ms.filter(x=>x.del).length+"-"+ms.filter(x=>x.media).length+"-"+ms.reduce((a,x)=>a+(x.edits?x.edits.length:0),0);
+  const m=$("#main");
+  if(key===lastKey)return;
+  const near=first||m.scrollHeight-m.scrollTop-m.clientHeight<150;
+  lastKey=key;m.dataset.v="chat";
+  let h="",day="";
+  for(const x of ms){
+    const d=new Date(x.time).toDateString();
+    if(d!==day){day=d;h+=`<div class="day">${new Date(x.time).toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</div>`}
+    let b=x.del?`<div class="dl">${x.delMe?"🗑 حذفتها من هاتفك":"🚫 حُذفت"}${x.pre?" (قبل الربط)":""} · ${fmtD(x.del)}</div>`:"";
+    if(x.q)b+=`<div class="qt"><b>${esc(x.q.n||"")}</b><div dir="auto">${esc(x.q.text||LBL[x.q.type]||"")}</div></div>`;
+    if(x.media){const u=`/media/${acc}/${encodeURIComponent(x.media)}`;
+      if(x.type==="imageMessage"||x.type==="stickerMessage")b+=`<img loading="lazy" src="${u}">`;
+      else if(x.type==="videoMessage")b+=`<video controls preload="metadata" src="${u}"></video>`;
+      else if(x.type==="audioMessage")b+=`<audio controls src="${u}"></audio>`;
+      else b+=`<a href="${u}" download>📄 ${esc(x.fileName||"ملف")}</a>`;
+    }else if(x.thumb)b+=`<img class="blur" src="/media/${acc}/${encodeURIComponent(x.thumb)}"><div class="ph">${LBL[x.type]||""} (لم تُحفظ الوسيلة)</div>`;
+    else if(LBL[x.type])b+=`<div class="ph">${LBL[x.type]}</div>`;
+    if(x.text)b+=`<div dir="auto">${esc(x.text)}</div>`;
+    for(const e of x.edits||[])b+=`<div class="ed" dir="auto">✏️ عُدّلت إلى: ${esc(e.text)} <small>${fmtD(e.at)}</small></div>`;
+    if(!b)b=`<div class="ph">رسالة غير مدعومة</div>`;
+    const sn=cur.group&&!x.fromMe?`<div class="sn" style="color:${hue(x.sn)}">${esc(x.sn)}</div>`:"";
+    h+=`<div class="b ${x.fromMe?"me":"th"}${x.del?" dd":""}">${sn}${b}<div class="t">${x.eph?"⏱ ":""}${fmtT(x.time)}</div></div>`;
+  }
+  m.innerHTML=`<div class="wall">${h||'<div class="day">لا رسائل</div>'}</div>`;
+  m.querySelectorAll(".b img:not(.blur)").forEach(i=>i.onclick=()=>{$("#lb").innerHTML=`<img src="${i.src}">`;$("#lb").hidden=false});
+  if(near)m.scrollTop=m.scrollHeight;
+}
+window.goBack=()=>{
+  if(!$("#lb").hidden){$("#lb").hidden=true;return true}
+  if(!$("#dg").hidden){$("#dg").hidden=true;return true}
+  if(!$("#menu").hidden){$("#menu").hidden=true;return true}
+  if(view==="chat"){view="list";cur=null;lastKey="";$("#main").dataset.v="";refresh();return true}
+  if(delMode){delMode=false;lastKey="";$("#main").dataset.v="";refresh();return true}
+  if(!$("#sbar").hidden){$("#sbar").hidden=true;q="";$("#q").value="";refresh();return true}
+  return false;
+};
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{acc=t.dataset.a;delMode=false;view="list";cur=null;q="";$("#q").value="";lastKey="";$("#main").dataset.v="";refresh()});
+$("#bB").onclick=window.goBack;
+$("#bS").onclick=()=>{const s=$("#sbar");s.hidden=!s.hidden;if(!s.hidden)$("#q").focus();else{q="";$("#q").value="";refresh()}};
+$("#q").oninput=e=>{q=e.target.value.trim();refresh()};
+$("#bM").onclick=e=>{e.stopPropagation();$("#menu").hidden=!$("#menu").hidden};
+document.addEventListener("click",()=>$("#menu").hidden=true);
+$("#lb").onclick=()=>$("#lb").hidden=true;
+async function showDg(){
+  const d=await api("/api/diag?acc="+acc),e=$("#dg");
+  if(!d){e.innerHTML="<p>تعذّر جلب الحالة</p>"}else{
+    const st=d.stats||{},R=(k,v)=>`<tr><td style="color:var(--sub)">${k}</td><td dir="auto">${esc(v??"—")}</td></tr>`;
+    const stTxt={open:"متصل ✅",qr:"بانتظار الربط",closed:"مقطوع ⚠️",connecting:"جارٍ الاتصال…"}[d.status]||d.status;
+    e.innerHTML=`<h3>حالة ${NM[acc]}</h3><table>${R("الاتصال",stTxt)}${R("مربوط",d.linked?"نعم":"لا")}${R("آخر اتصال ناجح",fmtD(st.open))}${R("آخر انقطاع",fmtD(st.close)+(st.closeCode?" ("+st.closeCode+")":""))}${R("مرات إعادة الاتصال",st.reconnects)}${R("آخر نشاط من واتساب",fmtD(st.lastEvent))}${R("آخر رسالة جديدة",fmtD(st.lastMsg))}${R("آخر حذف رُصد",fmtD(st.lastDel))}${R("عدد الحذف المرصود",st.dels)}${R("الرسائل المحفوظة",d.total)}${R("الدردشات",d.chats)}${R("الوسائط",d.mediaFiles+" ملف ("+d.mediaMB+" ميغا)")}${R("حفظ الحالات",d.saveStatus?"مُفعّل":"متوقف")}</table><h4 style="margin-top:14px">السجل</h4><pre>${esc(d.logs.join("\n"))}</pre><button class="btn" id="dgx">إغلاق</button>`;
+    $("#dgx").onclick=()=>e.hidden=true;
+  }
+  e.hidden=false;
+}
+$("#mDg").onclick=showDg;
+$("#mSt").onclick=async()=>{const s=await api("/api/settings");const n=await post("/api/settings",{status:!(s&&s.status)});alert(n&&n.status?"تم تشغيل حفظ الحالات":"تم إيقاف حفظ الحالات")};
+$("#bX").onclick=()=>{if(cur)location.href=`/api/export?acc=${acc}&jid=${encodeURIComponent(cur.jid)}`};
+$("#mDel").onclick=()=>{delMode=true;view="list";cur=null;lastKey="";$("#main").dataset.v="";refresh()};
+$("#mExp").onclick=()=>{window.Android?Android.exportMessages(acc):alert("متاح داخل التطبيق فقط")};
+$("#mOut").onclick=async()=>{if(confirm("فصل الحساب؟ تبقى الرسائل المحفوظة ويمكنك الربط مجددًا.")){await post("/api/logout",{acc});lastKey="";$("#main").dataset.v="";refresh()}};
+refresh();setInterval(refresh,2500);
+</script></body></html>

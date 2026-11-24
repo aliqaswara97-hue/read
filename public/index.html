@@ -56,7 +56,7 @@ nav button.on{color:#fff;border-color:#fff}
 .msg img{cursor:zoom-in}.msg audio{width:240px;max-width:100%}
 .empty{padding:50px 24px;text-align:center;color:var(--sub);line-height:1.8;direction:rtl;align-self:center}
 .banner{background:#fff3cd;color:#664d03;padding:10px 16px;text-align:center;display:none;line-height:1.7;font-size:14px}.banner b{font-size:24px;letter-spacing:3px;direction:ltr;display:block}
-#down{position:fixed;bottom:54px;inset-inline-start:16px;width:44px;height:44px;border-radius:50%;border:0;background:var(--panel);color:var(--text);box-shadow:0 2px 6px #0005;font-size:20px;display:none;z-index:20}
+#down{position:fixed;bottom:84px;inset-inline-start:16px;width:44px;height:44px;border-radius:50%;border:0;background:var(--panel);color:var(--text);box-shadow:0 2px 6px #0005;font-size:20px;display:none;z-index:20}
 #viewer{position:fixed;inset:0;background:#000;z-index:50;display:none;flex-direction:column;color:#fff;direction:rtl;touch-action:manipulation}
 #bars{display:flex;gap:3px;padding:10px 8px 6px}#bars div{flex:1;height:3px;background:#ffffff55;border-radius:2px;overflow:hidden}#bars i{display:block;height:100%;width:0;background:#fff}
 #vh{display:flex;align-items:center;gap:10px;padding:4px 12px}
@@ -71,6 +71,20 @@ nav button.on{color:#fff;border-color:#fff}
 #sheet>div{background:var(--panel);width:100%;border-radius:16px 16px 0 0;padding:16px 20px 28px;direction:rtl;max-height:75vh;overflow-y:auto}
 #sheet h3{margin:0 0 10px;font-size:17px}#sheet p{margin:8px 0;font-size:14px;line-height:1.6}#sheet small{color:var(--sub);display:block}
 #toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;z-index:80;display:none;max-width:90%;text-align:center}
+#ro{display:none;padding:0;background:var(--panel);border-top:1px solid var(--line)}
+#reply{display:none;align-items:center;gap:8px;padding:6px 12px;background:var(--bg)}
+#reply .rb{flex:1;min-width:0;border-inline-start:4px solid var(--head);padding:2px 8px}
+#reply b{display:block;font-size:12.5px;color:var(--head)}#reply span{display:block;font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#reply button,#rec button,#comp button{background:none;border:0;font-size:22px;padding:6px 8px;color:var(--sub)}
+#comp{display:flex;align-items:flex-end;gap:4px;padding:6px 8px}
+#comp textarea{flex:1;resize:none;border:0;border-radius:20px;background:var(--bg);color:var(--text);padding:10px 14px;font-size:15px;max-height:120px;outline:none;font-family:inherit}
+#comp #send{background:var(--head);color:#fff;border-radius:50%;width:44px;height:44px;padding:0;font-size:18px}
+#rec{display:none;align-items:center;gap:10px;padding:8px 12px}#rec .dot{color:var(--red);animation:bl 1s infinite}@keyframes bl{50%{opacity:.2}}
+.act{display:block;width:100%;text-align:start;background:none;border:0;border-top:1px solid var(--line);padding:13px 4px;font-size:15px;color:var(--text)}
+.emo{display:flex;justify-content:space-around;padding:4px 0 12px}.emo span{font-size:28px;padding:0 4px}
+.rx{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 7px;font-size:13px;margin-top:3px}
+.fail{color:var(--red);font-size:13px}.fail button{margin-inline-start:8px;border:1px solid var(--red);background:none;color:var(--red);border-radius:10px;padding:2px 10px}
+.hit{padding:8px 16px;border-bottom:1px solid var(--line);cursor:pointer}.hit small{color:var(--sub)}.hit .p{font-size:14px;color:var(--sub)}.hit .p.r{color:var(--red)}
 </style>
 </head>
 <body>
@@ -79,7 +93,7 @@ nav button.on{color:#fff;border-color:#fff}
     <button id="back" aria-label="رجوع">→</button><div id="hav"></div>
     <div class="g"><div class="t" id="title">أرشيف واتساب</div><div class="s" id="subt"></div></div>
     <button id="dots" aria-label="القائمة">⋮</button>
-    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div></div>
+    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div><div id="m-exp">💾 تصدير هذه المحادثة (txt)</div></div>
   </header>
   <nav id="tabs"></nav>
   <div id="banner" class="banner"></div>
@@ -87,7 +101,12 @@ nav button.on{color:#fff;border-color:#fff}
   <div id="view"></div>
   <div id="fbar"></div>
   <div id="thread"></div>
-  <div id="ro">🔒 أرشيف للقراءة فقط — الرسائل المحذوفة محفوظة</div>
+  <div id="ro">
+    <div id="reply"><div class="rb"><b id="rn"></b><span id="rt"></span></div><button id="rx">✕</button></div>
+    <div id="comp"><button id="att">📎</button><textarea id="inp" rows="1" placeholder="اكتب رسالة"></textarea><button id="send">🎤</button></div>
+    <div id="rec"><button id="rcx">🗑</button><span class="dot">●</span><b id="rtime">0:00</b><span style="flex:1;color:var(--sub)">جارٍ التسجيل…</span><button id="rsend" style="color:var(--head)">➤</button></div>
+  </div>
+  <input type="file" id="attf" style="display:none">
 </div>
 <input type="file" id="file" accept=".vcf,text/vcard,text/x-vcard,text/directory" style="display:none">
 <button id="down" aria-label="للأسفل">⌄</button>
@@ -101,6 +120,8 @@ nav button.on{color:#fff;border-color:#fff}
 <div id="toast"></div>
 <script>
 const $ = id => document.getElementById(id);
+const API = (url, opts = {}) => fetch(url, { ...opts, headers: { 'X-Archive': '1', ...(opts.headers || {}) } });
+const post = async (url, body) => (await API(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
 const TABS = [['chats','المحادثات'],['delmsgs','رسائل محذوفة'],['status','الحالات'],['delstatus','حالات محذوفة']];
 const COLORS = ['#1fa855','#128c7e','#d9534f','#e67e22','#8e44ad','#2980b9','#c0392b','#16a085','#d35400','#7f8c8d'];
 const col = s => COLORS[[...String(s)].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length];
@@ -110,7 +131,7 @@ const same = (a, b) => new Date(a).toDateString() === new Date(b).toDateString()
 const day = ts => same(ts, Date.now()) ? 'اليوم' : same(ts, Date.now() - 864e5) ? 'أمس' : D(ts);
 const DT = ts => day(ts) + '، ' + T(ts);
 const FULL = ts => new Date(ts).toLocaleString('ar', { dateStyle: 'full', timeStyle: 'medium' });
-const LBL = { imageMessage: '📷 صورة', videoMessage: '🎥 فيديو', audioMessage: '🎤 رسالة صوتية', documentMessage: '📄 مستند', stickerMessage: 'ملصق' };
+const LBL = { imageMessage: '📷 صورة', videoMessage: '🎥 فيديو', audioMessage: '🎤 رسالة صوتية', documentMessage: '📄 مستند', stickerMessage: 'ملصق', revoked: '🚫 رسالة محذوفة (لم تُلتقط قبل الحذف)' };
 const prev = m => m.text || LBL[m.type] || 'رسالة';
 const pv = (m, group) => (m.fromMe ? '✓✓ ' : (group && m.senderName ? m.senderName + ': ' : '')) + prev(m);
 const PAGE = 120;
@@ -168,15 +189,25 @@ function drawTabs() {
 async function renderChats(delOnly) {
   const all = await (await fetch('/api/chats' + (delOnly ? '?deleted=1' : ''))).json();
   const chats = all.filter(c => !q || c.name.toLowerCase().includes(q) || (c.number || '').includes(q));
-  const sig = 'c' + delOnly + q + JSON.stringify(chats); if (sig === listSig) return; listSig = sig;
+  const hits = q.length >= 2 ? await (await fetch('/api/search?q=' + encodeURIComponent(q) + (delOnly ? '&deleted=1' : ''))).json() : [];
+  const sig = 'c' + delOnly + q + JSON.stringify([chats, hits]); if (sig === listSig) return; listSig = sig;
   const box = $('view'), st = box.scrollTop; box.replaceChildren();
-  if (!chats.length) return box.append(empty(q ? 'لا نتائج.' : delOnly ? 'لا توجد رسائل محذوفة حتى الآن.' : 'لا توجد رسائل بعد. ستظهر هنا فور وصولها.'));
+  if (!chats.length && !hits.length) return box.append(empty(q ? 'لا نتائج.' : delOnly ? 'لا توجد رسائل محذوفة حتى الآن.' : 'لا توجد رسائل بعد. ستظهر هنا فور وصولها.'));
   for (const c of chats) {
     const g = c.jid.endsWith('@g.us'), lm = delOnly ? c.lastDeleted : c.last;
     const r = row(avatar(c.name, 50, g), c.name, delOnly ? '❌ ' + pv(lm, g) : pv(lm, g), delOnly,
       delOnly ? DT(lm.deletedAt) : (same(lm.ts, Date.now()) ? T(lm.ts) : day(lm.ts)), c.deleted ? '❌ ' + c.deleted : '');
     r.onclick = () => openChat(c, delOnly);
     box.append(r);
+  }
+  if (hits.length) {
+    box.append(el('div', 'sec', 'الرسائل (' + hits.length + ')'));
+    for (const x of hits) {
+      const d = el('div', 'hit');
+      d.append(el('b', '', x.name + ' • ' + x.senderName), el('div', 'p' + (x.deleted ? ' r' : ''), (x.deleted ? '❌ ' : '') + x.text.slice(0, 120)), el('small', '', DT(x.ts)));
+      d.onclick = () => openChat({ jid: x.jid, name: x.name, number: x.number }, x.deleted && delOnly);
+      box.append(d);
+    }
   }
   box.scrollTop = st;
 }
@@ -202,6 +233,7 @@ function dayEl(ts) { const d = el('div', 'day', day(ts)); d.dataset.ts = ts; ret
 function stickBottom() { if (th && th.settle) { const b = $('thread'); b.scrollTop = b.scrollHeight; } }
 const runKey = m => m.fromMe ? 'me' : m.sender;
 
+const sg = x => [x.media, x.mediaError, x.text, x.deleted, x.edited, JSON.stringify(x.reactions || {})].join('|');
 function msgNode(m, group, cont) {
   const d = el('div', 'msg' + (m.fromMe ? ' me' : '') + (cont ? ' cont' : ''));
   d._m = m;
@@ -219,13 +251,22 @@ function msgNode(m, group, cont) {
     else if (m.type === 'audioMessage') { n = el('audio'); n.src = u; n.controls = true; n.preload = 'none'; }
     else { n = el('a', '', '📎 ملف'); n.href = u; }
     d.append(n);
-  } else if (LBL[m.type] && !m.text) d.append(el('div', 'txt', LBL[m.type] + ' (غير محفوظ)'));
+  } else if (LBL[m.type]) {
+    if (m.type === 'revoked') d.append(el('div', 'txt', LBL.revoked));
+    else if (m.mediaError || Date.now() - m.ts > 120000) {
+      const f = el('div', 'fail', '⚠️ ' + LBL[m.type] + ' — تعذر حفظ الملف');
+      if (m.retry) { const b = el('button', '', 'إعادة المحاولة'); b.onclick = async () => { b.disabled = true; const r = await post('/api/retry-media', { id: m.id }); toast(r.ok ? 'تم تحميل الملف ✅' : 'تعذر: ' + r.error); loadThread(); }; f.append(b); }
+      d.append(f);
+    } else d.append(el('div', 'txt', LBL[m.type] + ' (جارٍ التحميل...)'));
+  }
   if (m.text) { const t = el('div', 'txt'); linkify(t, m.text); d.append(t); }
   const meta = el('div', 'meta');
   if (m.edited) meta.append(el('span', '', 'تم التعديل'));
   meta.append(el('span', '', T(m.ts)));
   if (m.fromMe) meta.append(el('span', 'tk', '✓✓'));
   d.append(meta);
+  const rv = Object.values(m.reactions || {});
+  if (rv.length) d.append(el('div', 'rx', [...new Set(rv)].join(' ') + (rv.length > 1 ? ' ' + rv.length : '')));
   if (m.deleted) markNode(d, m);
   return d;
 }
@@ -308,6 +349,7 @@ async function loadThread() {
   for (const m of list) {
     const n = th.nodes.get(m.id);
     if (n) {
+      if (sg(m) !== sg(n._m)) { const nn = msgNode(m, th.group, n.classList.contains('cont')); n.replaceWith(nn); th.nodes.set(m.id, nn); continue; }
       n._m = m;
       if (m.deleted && !n.classList.contains('del')) markNode(n, m);
       if (m.edited && !n.querySelector('.meta span[data-e]')) { const s = el('span', '', 'تم التعديل'); s.dataset.e = 1; n.querySelector('.meta').prepend(s); const t = n.querySelector('.txt'); if (t) { t.replaceChildren(); linkify(t, m.text); } }
@@ -328,13 +370,24 @@ function appendMsg(m) {
 
 // معلومات الرسالة (ضغطة مطولة)
 function showInfo(m) {
-  const c = $('sc'); c.replaceChildren(el('h3', '', 'معلومات الرسالة'));
+  const c = $('sc'); c.replaceChildren(el('h3', '', 'خيارات ومعلومات الرسالة'));
+  const acts = el('div'); c.append(acts);
   const add = (k, v, red) => { const p = el('p'); const s = el('small', '', k); p.append(s, v); if (red) p.style.color = 'var(--red)'; c.append(p); };
   add('المرسل', m.fromMe ? 'أنت' : m.senderName);
   add('وقت الإرسال', FULL(m.ts));
   if (m.deleted) add('وقت الحذف', FULL(m.deletedAt) + ' (بعد ' + Math.max(0, Math.round((m.deletedAt - m.ts) / 60000)) + ' دقيقة من إرسالها)', true);
   if (m.edited && m.orig) add('النص الأصلي قبل التعديل', m.orig);
   add('النوع', LBL[m.type] || 'نص');
+  const btn = (t, f) => { const b = el('button', 'act', t); b.onclick = () => { $('sheet').style.display = 'none'; f(); }; acts.append(b); };
+  if (!m.placeholder) {
+    const emo = el('div', 'emo');
+    for (const e of ['👍', '❤️', '😂', '😮', '😢', '🙏']) { const s = el('span', '', e); s.onclick = async () => { $('sheet').style.display = 'none'; const r = await post('/api/react', { id: m.id, emoji: e }); toast(r.ok ? 'تم التفاعل ' + e : 'تعذر: ' + r.error); }; emo.append(s); }
+    acts.append(emo);
+    btn('↩️ رد', () => { setReply(m); $('inp').focus(); });
+  }
+  if (m.text) btn('📋 نسخ النص', () => navigator.clipboard?.writeText(m.text).then(() => toast('تم النسخ')));
+  if (m.fromMe && !m.deleted && m.text) btn('✏️ تعديل', async () => { const t = prompt('عدّل الرسالة:', m.text); if (t && t.trim() && t !== m.text) { const r = await post('/api/edit', { id: m.id, text: t }); toast(r.ok ? 'تم التعديل' : 'تعذر: ' + r.error); } });
+  if (m.fromMe && !m.deleted) btn('🗑 حذف للجميع', async () => { if (!confirm('حذف الرسالة للجميع؟ (ستبقى نسخة في الأرشيف)')) return; const r = await post('/api/delete', { id: m.id }); toast(r.ok ? 'تم الحذف' : 'تعذر: ' + r.error); });
   $('sheet').style.display = 'flex';
 }
 $('sheet').onclick = e => { if (e.target.id === 'sheet') $('sheet').style.display = 'none'; };
@@ -344,12 +397,20 @@ const tbox = $('thread');
 tbox.addEventListener('scroll', () => { $('down').style.display = tbox.scrollHeight - tbox.scrollTop - tbox.clientHeight > 400 ? 'block' : 'none'; });
 tbox.addEventListener('play', e => tbox.querySelectorAll('audio,video').forEach(x => { if (x !== e.target) x.pause(); }), true);
 tbox.addEventListener('click', e => { if (e.target.tagName === 'IMG' && e.target.closest('.msg')) { $('lb').firstChild.src = e.target.src; $('lb').style.display = 'flex'; } });
-let hold = null;
+let hold = null, sw = null;
 tbox.addEventListener('touchstart', e => {
-  const n = e.target.closest('.msg'); if (!n || ['AUDIO', 'VIDEO', 'A'].includes(e.target.tagName)) return;
-  clearTimeout(hold); hold = setTimeout(() => showInfo(n._m), 550);
+  const n = e.target.closest('.msg'); if (!n || ['AUDIO', 'VIDEO', 'A', 'BUTTON'].includes(e.target.tagName)) return;
+  const t = e.touches[0]; sw = { n, x: t.clientX, y: t.clientY };
+  clearTimeout(hold); hold = setTimeout(() => { sw = null; showInfo(n._m); }, 550);
 }, { passive: true });
-['touchmove', 'touchend', 'touchcancel'].forEach(ev => tbox.addEventListener(ev, () => clearTimeout(hold), { passive: true }));
+tbox.addEventListener('touchmove', e => { if (!sw) return; const t = e.touches[0]; if (Math.abs(t.clientX - sw.x) > 8 || Math.abs(t.clientY - sw.y) > 8) clearTimeout(hold); }, { passive: true });
+tbox.addEventListener('touchend', e => {
+  clearTimeout(hold); if (!sw) return;
+  const t = e.changedTouches[0];
+  if (Math.abs(t.clientX - sw.x) > 70 && Math.abs(t.clientY - sw.y) < 35 && !sw.n._m.placeholder) { setReply(sw.n._m); $('inp').focus(); }
+  sw = null;
+}, { passive: true });
+tbox.addEventListener('touchcancel', () => { clearTimeout(hold); sw = null; }, { passive: true });
 tbox.addEventListener('contextmenu', e => { const n = e.target.closest('.msg'); if (n) { e.preventDefault(); showInfo(n._m); } });
 $('lb').onclick = () => { $('lb').style.display = 'none'; };
 $('down').onclick = () => tbox.scrollTo({ top: tbox.scrollHeight, behavior: 'smooth' });
@@ -408,9 +469,10 @@ vcEl.addEventListener('click', e => {
 $('dots').onclick = e => { e.stopPropagation(); const m = $('menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
 document.addEventListener('click', () => { $('menu').style.display = 'none'; });
 $('m-imp').onclick = () => $('file').click();
+$('m-exp').onclick = () => { if (cur) location.href = '/api/export?jid=' + encodeURIComponent(cur.jid); else toast('افتح محادثة أولًا ثم اختر التصدير.'); };
 $('m-sync').onclick = async () => {
   toast('جارٍ طلب الأسماء من واتساب...');
-  try { const r = await (await fetch('/api/resync', { method: 'POST' })).json(); toast(r.ok ? 'تم الطلب، انتظر دقيقة ثم حدّث الصفحة.' : 'تعذّرت المزامنة: ' + r.error + ' — استخدم استيراد vCard.'); }
+  try { const r = await (await API('/api/resync', { method: 'POST' })).json(); toast(r.ok ? 'تم الطلب، انتظر دقيقة ثم حدّث الصفحة.' : 'تعذّرت المزامنة: ' + r.error + ' — استخدم استيراد vCard.'); }
   catch { toast('تعذّر الاتصال بالخادم.'); }
 };
 function qpDecode(s) {
@@ -442,13 +504,14 @@ $('file').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   const list = parseVcf(await f.text());
   if (!list.length) return toast('لم أجد جهات اتصال في الملف.');
-  const r = await (await fetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list }) })).json();
+  const r = await (await API('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list }) })).json();
   toast('تم استيراد ' + r.count + ' جهة اتصال ✅'); e.target.value = '';
   listSig = null; if (cur) { th = null; loadThread(); } renderCurrent(); loadStatus();
 };
 
 // ---------- عام ----------
 function show() {
+  setReply(null);
   drawTabs();
   $('view').style.display = 'block'; $('tabs').style.display = 'flex'; $('sbar').style.display = 'block';
   $('thread').style.display = 'none'; $('fbar').style.display = 'none'; $('down').style.display = 'none'; $('ro').style.display = 'none';
@@ -473,9 +536,65 @@ async function loadStatus() {
     } else if (s.state === 'needs_phone') { b.textContent = 'شغّل التطبيق مع PHONE=رقمك لأول مرة.'; b.style.display = 'block'; }
     else if (s.state === 'starting') { b.textContent = 'جارٍ الاتصال...'; b.style.display = 'block'; }
     else if (s.state === 'open' && s.contacts === 0 && s.imported === 0) { b.textContent = 'لم تصل أسماء جهات الاتصال بعد. اضغط ⋮ ثم «استيراد جهات الاتصال» لاستيرادها من هاتفك.'; b.style.display = 'block'; }
+    else if (s.state === 'open' && s.lastMsgAt && s.now - s.lastMsgAt > 6 * 3600e3) { b.textContent = 'لم تصل رسائل منذ ' + Math.round((s.now - s.lastMsgAt) / 3600e3) + ' ساعة. إن كان ذلك غير طبيعي فأعد ربط الجهاز.'; b.style.display = 'block'; }
     else b.style.display = 'none';
   } catch { b.textContent = 'الخادم غير متصل.'; b.style.display = 'block'; }
 }
+
+// ---------- الكتابة والرد والصوت ----------
+let replyTo = null;
+function setReply(m) {
+  replyTo = m; $('reply').style.display = m ? 'flex' : 'none';
+  if (m) { $('rn').textContent = m.fromMe ? 'أنت' : m.senderName; $('rt').textContent = prev(m).slice(0, 90); }
+}
+$('rx').onclick = () => setReply(null);
+async function afterSend() { for (let i = 0; i < 4; i++) { await loadThread(); tbox.scrollTop = tbox.scrollHeight; await new Promise(r => setTimeout(r, 700)); } }
+function autosize() { const t = $('inp'); t.style.height = 'auto'; t.style.height = Math.min(120, t.scrollHeight) + 'px'; $('send').textContent = t.value.trim() ? '➤' : '🎤'; }
+$('inp').oninput = autosize;
+async function sendText() {
+  const t = $('inp').value.trim(); if (!t || !cur) return;
+  const rt = replyTo?.id; $('inp').value = ''; autosize(); setReply(null);
+  const r = await post('/api/send', { jid: cur.jid, text: t, replyTo: rt });
+  if (!r.ok) { toast('تعذر الإرسال: ' + r.error); $('inp').value = t; autosize(); } else afterSend();
+}
+async function sendMedia(blob, kind, o = {}) {
+  const p = new URLSearchParams({ jid: cur.jid, kind, mimetype: (blob.type || '').split(';')[0] });
+  for (const k of ['filename', 'caption', 'seconds']) if (o[k]) p.set(k, o[k]);
+  if (replyTo) p.set('replyTo', replyTo.id);
+  setReply(null); toast('جارٍ الإرسال...');
+  const r = await (await API('/api/send-media?' + p, { method: 'POST', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob })).json();
+  if (r.ok) { toast('تم الإرسال ✅'); afterSend(); } else toast('تعذر الإرسال: ' + r.error);
+}
+$('att').onclick = () => $('attf').click();
+$('attf').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f || !cur) return;
+  const kind = f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : f.type.startsWith('audio/') ? 'audio' : 'document';
+  const caption = kind === 'audio' ? '' : (prompt('تعليق (اختياري):') || '');
+  await sendMedia(f, kind, { filename: f.name, caption });
+};
+let mr = null, chunks = [], rstart = 0, rtimer = null, rcancel = false;
+async function startRec() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'].find(t => MediaRecorder.isTypeSupported(t));
+    mr = new MediaRecorder(stream, mime ? { mimeType: mime } : {}); chunks = []; rcancel = false;
+    mr.ondataavailable = e => chunks.push(e.data);
+    mr.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); clearInterval(rtimer);
+      $('rec').style.display = 'none'; $('comp').style.display = 'flex';
+      if (rcancel) return;
+      const secs = Math.round((Date.now() - rstart) / 1000);
+      if (secs < 1) return toast('التسجيل قصير جدًا');
+      await sendMedia(new Blob(chunks, { type: mr.mimeType }), 'voice', { seconds: secs });
+    };
+    mr.start(); rstart = Date.now();
+    $('comp').style.display = 'none'; $('rec').style.display = 'flex'; $('rtime').textContent = '0:00';
+    rtimer = setInterval(() => { const s = Math.floor((Date.now() - rstart) / 1000); $('rtime').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }, 250);
+  } catch (e) { toast('تعذر الوصول للميكروفون: ' + e.message); }
+}
+$('send').onclick = () => $('inp').value.trim() ? sendText() : startRec();
+$('rcx').onclick = () => { rcancel = true; mr.stop(); };
+$('rsend').onclick = () => mr.stop();
 
 show(); loadStatus();
 setInterval(loadStatus, 5000);

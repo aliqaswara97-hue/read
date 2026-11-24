@@ -1,13 +1,16 @@
 import makeWASocket, {
-  useMultiFileAuthState, DisconnectReason, downloadMediaMessage,
+  BufferJSON, useMultiFileAuthState, DisconnectReason, downloadMediaMessage,
   fetchLatestBaileysVersion, Browsers
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import express from 'express';
 import fs from 'fs';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+const run = promisify(execFile);
 
 const log = pino({ level: 'silent' });
-const status = { state: 'starting', code: null };
+const status = { state: 'starting', code: null, since: Date.now(), lastMsgAt: null, lastOpenAt: null };
 const DATA = './data', MEDIA = `${DATA}/media`, DB_FILE = `${DATA}/db.json`;
 fs.mkdirSync(MEDIA, { recursive: true });
 
@@ -73,9 +76,46 @@ const numberOf = (jid) => {
   return pn ? '+' + pn.split('@')[0] : '';
 };
 
-function markDeleted(id) {
-  const r = db.messages[id];
+function markDeleted(id, key) {
+  let r = db.messages[id];
+  if (!r && key?.remoteJid) {   // رسالة حُذفت قبل أن نلتقطها: نسجّل الحذف على الأقل
+    const chat = norm(key.remoteJid);
+    if (chat.endsWith('@newsletter')) return;
+    r = db.messages[id] = { id, chat, fromMe: !!key.fromMe, sender: norm(key.participant || chat), text: '', type: 'revoked', ts: Date.now(), media: null, deleted: false, placeholder: true };
+  }
   if (r && !r.deleted) { r.deleted = true; r.deletedAt = Date.now(); save(); console.log('🗑️ حُذفت رسالة', id); }
+}
+
+const SKIP = new Set(['messageContextInfo', 'senderKeyDistributionMessage', 'albumMessage', 'pollUpdateMessage', 'keepInChatMessage', 'encReactionMessage', 'secretEncryptedMessage']);
+const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/3gpp': '3gp', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'application/pdf': 'pdf' };
+const extOf = (mime, fname) => {
+  const b = (mime || '').split(';')[0].trim().toLowerCase();
+  if (EXT[b]) return EXT[b];
+  if (fname && /\.[A-Za-z0-9]{1,6}$/.test(fname)) return fname.split('.').pop().toLowerCase();
+  return (b.split('/')[1] || 'bin').replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin';
+};
+async function saveMedia(sock, m, body, rec, tries = 3) {
+  let err;
+  for (let i = 0; i < tries; i++) {
+    if (i) await new Promise(r => setTimeout(r, i * 3000));
+    try {
+      const buf = await downloadMediaMessage(m, 'buffer', {}, { logger: log, reuploadRequest: sock.updateMediaMessage });
+      rec.media = `${rec.id}.${extOf(body?.mimetype, body?.fileName)}`;
+      fs.writeFileSync(`${MEDIA}/${rec.media}`, buf);
+      delete rec.mediaError; delete rec.raw; save();
+      return true;
+    } catch (e) { err = e; }
+  }
+  rec.mediaError = err?.message || 'خطأ';
+  rec.raw = JSON.parse(JSON.stringify(m, BufferJSON.replacer)); save();
+  console.log('تعذر حفظ الوسائط:', rec.mediaError);
+  return false;
+}
+const gmTried = new Map();
+function ensureGroupName(sock, jid) {
+  if (db.names[jid] || Date.now() - (gmTried.get(jid) || 0) < 600000) return;
+  gmTried.set(jid, Date.now());
+  sock.groupMetadata(jid).then(g => { db.names[jid] = g.subject; save(); }).catch(() => {});
 }
 
 async function store(sock, m) {
@@ -85,7 +125,7 @@ async function store(sock, m) {
   const msg = raw.editedMessage ? unwrap(raw.editedMessage.message) : raw;
   if (msg.protocolMessage) {
     const p = msg.protocolMessage;
-    if (p.type === 0 && p.key?.id) markDeleted(p.key.id); // REVOKE
+    if (p.type === 0 && p.key?.id) markDeleted(p.key.id, { ...p.key, remoteJid: p.key.remoteJid || m.key.remoteJid, participant: p.key.participant || m.key.participant }); // REVOKE
     if (p.type === 14 && p.key?.id && db.messages[p.key.id]) { // EDIT
       const e = unwrap(p.editedMessage || {});
       const t = e?.conversation || e?.extendedTextMessage?.text || '';
@@ -94,7 +134,17 @@ async function store(sock, m) {
     }
     return;
   }
-  const type = Object.keys(msg).find(k => k !== 'messageContextInfo');
+  if (msg.reactionMessage) {
+    const rm = msg.reactionMessage, t = db.messages[rm.key?.id];
+    if (t) {
+      t.reactions ||= {};
+      const who = m.key.fromMe ? 'me' : norm(m.key.participant || jid);
+      if (rm.text) t.reactions[who] = rm.text; else delete t.reactions[who];
+      save();
+    }
+    return;
+  }
+  const type = Object.keys(msg).find(k => !SKIP.has(k));
   if (!type) return;
   const body = msg[type];
   const sender = norm(m.key.participant || jid);
@@ -105,25 +155,18 @@ async function store(sock, m) {
     id: m.key.id, chat: jid, fromMe: !!m.key.fromMe, sender,
     text: msg.conversation || body?.text || body?.caption || '',
     type, ts: Number(m.messageTimestamp) * 1000 || Date.now(),
-    media: null, deleted: false,
+    media: null, deleted: false, fileName: body?.fileName || null,
     bg: body?.backgroundArgb ?? null,
     quotedFrom: norm(body?.contextInfo?.participant || ''),
     quoted: (() => { const q = body?.contextInfo?.quotedMessage; const u = q && unwrap(q); return u?.conversation || u?.extendedTextMessage?.text || ''; })()
   };
   if (m.pushName && !rec.fromMe) db.names[sender] ||= m.pushName;
   await learnLid(sock, jid); if (sender !== jid) await learnLid(sock, sender);
-  if (jid.endsWith('@g.us') && !db.names[jid]) {
-    try { db.names[jid] = (await sock.groupMetadata(jid)).subject; } catch {}
-  }
-  if (/^(image|video|audio|document|sticker)Message$/.test(type)) {
-    try {
-      const buf = await downloadMediaMessage(m, 'buffer', {}, { logger: log, reuploadRequest: sock.updateMediaMessage });
-      const ext = (body.mimetype || '').split('/')[1]?.split(';')[0] || 'bin';
-      rec.media = `${rec.id}.${ext}`;
-      fs.writeFileSync(`${MEDIA}/${rec.media}`, buf);
-    } catch (e) { console.log('تعذر حفظ الوسائط:', e.message); }
-  }
-  if (!db.messages[rec.id]) { db.messages[rec.id] = rec; save(); }
+  if (jid.endsWith('@g.us')) ensureGroupName(sock, jid);
+  if (db.messages[rec.id] && !db.messages[rec.id].placeholder) return;
+  db.messages[rec.id] = rec; save();
+  status.lastMsgAt = Date.now();
+  if (/^(image|video|audio|document|sticker)Message$/.test(type)) saveMedia(sock, m, body, rec).catch(e => console.log('media:', e.message));
 }
 
 async function start() {
@@ -150,7 +193,7 @@ async function start() {
 
   sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
     if (connection === 'open') {
-      status.state = 'open'; status.code = null; console.log('✅ متصل ويحفظ الرسائل');
+      status.state = 'open'; status.code = null; status.lastOpenAt = Date.now(); console.log('✅ متصل ويحفظ الرسائل');
       setTimeout(() => sock.resyncAppState(
         ['critical_unblock_low', 'regular_low', 'regular_high', 'regular', 'critical_block'], true
       ).catch(e => console.log('مزامنة الأسماء:', e.message)), 5000);
@@ -162,7 +205,9 @@ async function start() {
         fs.rmSync(`${DATA}/auth`, { recursive: true, force: true });
         process.exit(1);
       }
-      start();
+      status.state = 'starting';
+      console.log('انقطع الاتصال، إعادة المحاولة...', code || '');
+      setTimeout(start, 3000);
     }
   });
 
@@ -173,17 +218,25 @@ async function start() {
     for (const m of messages) await store(sock, m).catch(e => console.log(e.message));
   });
   sock.ev.on('messages.update', (ups) => {
-    for (const u of ups) if (u.update?.messageStubType === 1) markDeleted(u.key.id); // REVOKE
+    for (const u of ups) if (u.update?.messageStubType === 1 || u.update?.message === null) markDeleted(u.key.id, u.key); // REVOKE
   });
 }
 
 // ---- واجهة الويب ----
 const app = express();
+const OK_HOSTS = new Set(['localhost:3000', '127.0.0.1:3000']);
+app.use((req, res, next) => {   // حماية: لا يقبل إلا طلبات هذه الصفحة نفسها
+  if (!OK_HOSTS.has(req.headers.host)) return res.status(403).end();
+  const o = req.headers.origin;
+  if (o && !OK_HOSTS.has(o.replace(/^https?:\/\//, ''))) return res.status(403).end();
+  if (req.method !== 'GET' && req.headers['x-archive'] !== '1') return res.status(403).json({ ok: false, error: 'forbidden' });
+  next();
+});
 app.use(express.static('public'));
 app.use('/media', express.static(MEDIA));
 
 app.use(express.json({ limit: '20mb' }));
-app.get('/api/status', (_, res) => res.json({ ...status, contacts: Object.keys(db.contacts).length, imported: db.vcards.length }));
+app.get('/api/status', (_, res) => res.json({ ...status, now: Date.now(), messages: Object.keys(db.messages).length, contacts: Object.keys(db.contacts).length, imported: db.vcards.length }));
 
 app.post('/api/contacts', (req, res) => {
   const list = Array.isArray(req.body?.list) ? req.body.list : [];
@@ -200,6 +253,78 @@ app.post('/api/resync', async (_, res) => {
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
+
+// ---- الإرسال والرد والتفاعل ----
+const online = () => { if (!sockRef || status.state !== 'open') throw new Error('غير متصل بواتساب الآن'); return sockRef; };
+const wrap = fn => async (req, res) => {
+  try { res.json({ ok: true, ...(await fn(req)) }); } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+};
+const keyOf = (r) => ({ remoteJid: r.chat, fromMe: r.fromMe, id: r.id, participant: r.chat.endsWith('@g.us') && !r.fromMe ? r.sender : undefined });
+const quotedOf = (id) => {
+  const r = db.messages[id]; if (!r) return undefined;
+  const k = keyOf(r);
+  if (r.fromMe && r.chat.endsWith('@g.us')) k.participant = norm(sockRef?.user?.id);
+  return { key: k, message: { conversation: r.text || '📎' } };
+};
+const TMP = `${DATA}/tmp`; fs.mkdirSync(TMP, { recursive: true });
+
+app.post('/api/send', wrap(async (req) => {
+  const { jid, text, replyTo } = req.body || {};
+  if (!jid || !text?.trim()) throw new Error('رسالة فارغة');
+  await online().sendMessage(jid, { text }, { quoted: quotedOf(replyTo) });
+  return {};
+}));
+
+app.post('/api/send-media', express.raw({ type: () => true, limit: '100mb' }), wrap(async (req) => {
+  const { jid, kind, caption, filename, mimetype, seconds, replyTo } = req.query;
+  let buf = req.body;
+  if (!jid || !Buffer.isBuffer(buf) || !buf.length) throw new Error('ملف فارغ');
+  let content;
+  if (kind === 'voice') {
+    const id = Date.now(), inp = `${TMP}/${id}.in`, out = `${TMP}/${id}.ogg`;
+    fs.writeFileSync(inp, buf);
+    try {
+      await run('ffmpeg', ['-y', '-i', inp, '-vn', '-c:a', 'libopus', '-b:a', '32k', '-ar', '48000', '-ac', '1', '-f', 'ogg', out]);
+      buf = fs.readFileSync(out);
+    } catch (e) { throw new Error(e.code === 'ENOENT' ? 'ثبّت ffmpeg أولًا: pkg install ffmpeg' : 'فشل تحويل الصوت'); }
+    finally { fs.rmSync(inp, { force: true }); fs.rmSync(out, { force: true }); }
+    content = { audio: buf, ptt: true, mimetype: 'audio/ogg; codecs=opus', seconds: Math.max(1, +seconds || 1) };
+  } else if (kind === 'image') content = { image: buf, caption: caption || undefined };
+  else if (kind === 'video') content = { video: buf, caption: caption || undefined, mimetype };
+  else if (kind === 'audio') content = { audio: buf, mimetype: mimetype || 'audio/mpeg' };
+  else content = { document: buf, fileName: filename || 'file', mimetype: mimetype || 'application/octet-stream', caption: caption || undefined };
+  await online().sendMessage(jid, content, { quoted: quotedOf(replyTo) });
+  return {};
+}));
+
+app.post('/api/delete', wrap(async (req) => {
+  const r = db.messages[req.body?.id];
+  if (!r || !r.fromMe) throw new Error('يمكنك حذف رسائلك فقط');
+  await online().sendMessage(r.chat, { delete: keyOf(r) });
+  return {};
+}));
+app.post('/api/edit', wrap(async (req) => {
+  const { id, text } = req.body || {}, r = db.messages[id];
+  if (!r || !r.fromMe || !text?.trim()) throw new Error('تعذّر التعديل');
+  await online().sendMessage(r.chat, { text, edit: keyOf(r) });
+  return {};
+}));
+app.post('/api/react', wrap(async (req) => {
+  const { id, emoji } = req.body || {}, r = db.messages[id];
+  if (!r) throw new Error('الرسالة غير موجودة');
+  await online().sendMessage(r.chat, { react: { text: emoji || '', key: keyOf(r) } });
+  return {};
+}));
+app.post('/api/retry-media', wrap(async (req) => {
+  const r = db.messages[req.body?.id];
+  if (!r?.raw) throw new Error('لا يمكن إعادة المحاولة لهذه الرسالة');
+  const m = JSON.parse(JSON.stringify(r.raw), BufferJSON.reviver);
+  const msg = unwrap(m.message), type = Object.keys(msg).find(k => !SKIP.has(k));
+  const ok = await saveMedia(online(), m, msg[type], r);
+  save();
+  if (!ok) throw new Error(r.mediaError);
+  return {};
+}));
 
 app.get('/api/chats', (req, res) => {
   const chats = {};
@@ -245,6 +370,26 @@ app.get('/api/chat', (req, res) => {
     .sort((a, b) => a.ts - b.ts)
     .map(m => ({ ...m, senderName: m.fromMe ? 'أنا' : nameOf(m.sender), quotedName: m.quotedFrom ? nameOf(m.quotedFrom) : '' }));
   res.json(list);
+});
+
+app.get('/api/search', (req, res) => {
+  const q = String(req.query.q || '').toLowerCase().trim();
+  if (q.length < 2) return res.json([]);
+  const only = req.query.deleted === '1';
+  const out = Object.values(db.messages)
+    .filter(m => m.chat !== 'status@broadcast' && m.text && (!only || m.deleted) && m.text.toLowerCase().includes(q))
+    .sort((a, b) => b.ts - a.ts).slice(0, 50)
+    .map(m => ({ id: m.id, jid: m.chat, name: nameOf(m.chat), number: numberOf(m.chat), text: m.text, ts: m.ts, deleted: m.deleted, deletedAt: m.deletedAt, senderName: m.fromMe ? 'أنا' : nameOf(m.sender) }));
+  res.json(out);
+});
+
+app.get('/api/export', (req, res) => {
+  const f = d => new Date(d).toLocaleString('ar-EG');
+  const lines = Object.values(db.messages).filter(m => m.chat === req.query.jid).sort((a, b) => a.ts - b.ts)
+    .map(m => `[${f(m.ts)}] ${m.fromMe ? 'أنا' : nameOf(m.sender)}: ${m.text || (m.media ? '[' + m.type.replace('Message', '') + '] ' + m.media : m.type === 'revoked' ? '(رسالة لم تُلتقط قبل حذفها)' : '')}${m.deleted ? '   ❌ حُذفت ' + f(m.deletedAt) : ''}`);
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="chat.txt"');
+  res.send(lines.join('\n'));
 });
 
 app.listen(3000, '127.0.0.1', () => console.log('🌐 افتح http://localhost:3000 في المتصفح'));

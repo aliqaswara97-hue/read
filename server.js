@@ -5,6 +5,7 @@ import makeWASocket, {
 import pino from 'pino';
 import express from 'express';
 import fs from 'fs';
+import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 const run = promisify(execFile);
@@ -232,10 +233,53 @@ app.use((req, res, next) => {   // حماية: لا يقبل إلا طلبات �
   if (req.method !== 'GET' && req.headers['x-archive'] !== '1') return res.status(403).json({ ok: false, error: 'forbidden' });
   next();
 });
+// ---- قفل بالرمز (PIN) ----
+const sessions = new Map();
+const cookieOf = (req) => Object.fromEntries((req.headers.cookie || '').split(';').map(x => x.trim().split('=')).filter(a => a[0]));
+const authed = (req) => (sessions.get(cookieOf(req).sess) || 0) > Date.now();
+const hashPin = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString('hex');
+const checkPin = (pin) => {
+  if (!db.pin) return true;
+  return crypto.timingSafeEqual(Buffer.from(hashPin(pin, db.pin.salt), 'hex'), Buffer.from(db.pin.hash, 'hex'));
+};
+const startSession = (res) => {
+  const t = crypto.randomBytes(24).toString('hex');
+  sessions.set(t, Date.now() + 12 * 3600e3);
+  res.setHeader('Set-Cookie', `sess=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`);
+};
+let fails = 0, lockedUntil = 0;
+app.use((req, res, next) => {
+  const p = req.path;
+  if (!db.pin || p === '/api/lock-status' || p === '/api/unlock' || !(p.startsWith('/api') || p.startsWith('/media')) || authed(req)) return next();
+  res.status(401).json({ ok: false, error: 'locked' });
+});
 app.use(express.static('public'));
 app.use('/media', express.static(MEDIA));
 
 app.use(express.json({ limit: '20mb' }));
+app.get('/api/lock-status', (req, res) => res.json({ hasPin: !!db.pin, unlocked: !db.pin || authed(req) }));
+app.post('/api/unlock', (req, res) => {
+  if (Date.now() < lockedUntil) return res.json({ ok: false, error: 'محاولات كثيرة، انتظر ' + Math.ceil((lockedUntil - Date.now()) / 1000) + ' ثانية' });
+  if (!checkPin(req.body?.pin ?? '')) {
+    if (++fails >= 5) { fails = 0; lockedUntil = Date.now() + 60000; }
+    return res.json({ ok: false, error: 'الرمز غير صحيح' });
+  }
+  fails = 0; startSession(res); res.json({ ok: true });
+});
+app.post('/api/lock', (req, res) => {
+  sessions.delete(cookieOf(req).sess);
+  res.setHeader('Set-Cookie', 'sess=; Max-Age=0; Path=/');
+  res.json({ ok: true });
+});
+app.post('/api/setpin', (req, res) => {
+  const { pin = '', old = '' } = req.body || {};
+  if (db.pin && !checkPin(old)) return res.json({ ok: false, error: 'الرمز الحالي غير صحيح' });
+  if (!pin) { delete db.pin; sessions.clear(); save(); return res.json({ ok: true, removed: true }); }
+  if (String(pin).length < 4) return res.json({ ok: false, error: 'الرمز 4 خانات على الأقل' });
+  const salt = crypto.randomBytes(16).toString('hex');
+  db.pin = { salt, hash: hashPin(pin, salt) }; save(); startSession(res);
+  res.json({ ok: true });
+});
 app.get('/api/status', (_, res) => res.json({ ...status, now: Date.now(), messages: Object.keys(db.messages).length, contacts: Object.keys(db.contacts).length, imported: db.vcards.length }));
 
 app.post('/api/contacts', (req, res) => {

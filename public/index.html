@@ -85,6 +85,11 @@ nav button.on{color:#fff;border-color:#fff}
 .rx{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 7px;font-size:13px;margin-top:3px}
 .fail{color:var(--red);font-size:13px}.fail button{margin-inline-start:8px;border:1px solid var(--red);background:none;color:var(--red);border-radius:10px;padding:2px 10px}
 .hit{padding:8px 16px;border-bottom:1px solid var(--line);cursor:pointer}.hit small{color:var(--sub)}.hit .p{font-size:14px;color:var(--sub)}.hit .p.r{color:var(--red)}
+#lock{position:fixed;inset:0;background:var(--head);z-index:100;display:none;align-items:center;justify-content:center;color:#fff;direction:rtl}
+.lbox{width:min(320px,90%);text-align:center}.lbox h2{margin:6px 0}.lbox p{opacity:.85;font-size:14px;margin:4px 0 10px}
+.lbox input{width:100%;margin:6px 0;padding:12px;border-radius:10px;border:0;font-size:18px;text-align:center;letter-spacing:4px;background:#fff;color:#111}
+.lbox button{width:100%;padding:12px;border:0;border-radius:10px;margin-top:8px;font-size:16px}
+#lgo{background:#25d366;color:#fff}#lcancel{background:#ffffff33;color:#fff}#le{color:#ffd0d0;min-height:22px;font-size:14px}
 </style>
 </head>
 <body>
@@ -93,7 +98,7 @@ nav button.on{color:#fff;border-color:#fff}
     <button id="back" aria-label="رجوع">→</button><div id="hav"></div>
     <div class="g"><div class="t" id="title">أرشيف واتساب</div><div class="s" id="subt"></div></div>
     <button id="dots" aria-label="القائمة">⋮</button>
-    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div><div id="m-exp">💾 تصدير هذه المحادثة (txt)</div></div>
+    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div><div id="m-pin">🔒 رمز القفل (تعيين / تغيير / إزالة)</div><div id="m-lock">🔐 قفل الآن</div><div id="m-exp">💾 تصدير هذه المحادثة (txt)</div></div>
   </header>
   <nav id="tabs"></nav>
   <div id="banner" class="banner"></div>
@@ -117,9 +122,14 @@ nav button.on{color:#fff;border-color:#fff}
 </div>
 <div id="lb"><img alt=""></div>
 <div id="sheet"><div id="sc"></div></div>
+<div id="lock"><div class="lbox"><div style="font-size:44px">🔒</div><h2 id="lt"></h2><p id="lm"></p>
+  <input id="p0" type="password" inputmode="numeric" autocomplete="off"><input id="p1" type="password" inputmode="numeric" autocomplete="off"><input id="p2" type="password" inputmode="numeric" autocomplete="off">
+  <div id="le"></div><button id="lgo">فتح</button><button id="lcancel">إلغاء</button></div></div>
 <div id="toast"></div>
 <script>
 const $ = id => document.getElementById(id);
+const _f = window.fetch.bind(window);
+window.fetch = async (...a) => { const r = await _f(...a); if (r.status === 401 && !locked) showLock('unlock'); return r; };
 const API = (url, opts = {}) => fetch(url, { ...opts, headers: { 'X-Archive': '1', ...(opts.headers || {}) } });
 const post = async (url, body) => (await API(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
 const TABS = [['chats','المحادثات'],['delmsgs','رسائل محذوفة'],['status','الحالات'],['delstatus','حالات محذوفة']];
@@ -596,10 +606,59 @@ $('send').onclick = () => $('inp').value.trim() ? sendText() : startRec();
 $('rcx').onclick = () => { rcancel = true; mr.stop(); };
 $('rsend').onclick = () => mr.stop();
 
-show(); loadStatus();
-setInterval(loadStatus, 5000);
+// ---------- قفل الشاشة ----------
+let locked = false, hasPin = false, lmode = 'unlock', hiddenAt = 0;
+const LM = {
+  unlock: { t: 'أرشيف واتساب', m: 'أدخل رمز القفل', f: { p0: 'الرمز' }, b: 'فتح' },
+  setup: { t: 'تعيين رمز القفل', m: 'اختر رمزًا من 4 خانات أو أكثر', f: { p1: 'الرمز الجديد', p2: 'أعد كتابة الرمز' }, b: 'حفظ' },
+  change: { t: 'تغيير رمز القفل', m: 'اترك الجديد فارغًا لإزالة القفل', f: { p0: 'الرمز الحالي', p1: 'الرمز الجديد', p2: 'أعد كتابة الجديد' }, b: 'حفظ' }
+};
+function showLock(mode) {
+  lmode = mode; locked = mode === 'unlock'; const c = LM[mode];
+  $('lt').textContent = c.t; $('lm').textContent = c.m; $('lgo').textContent = c.b; $('le').textContent = '';
+  for (const i of ['p0', 'p1', 'p2']) { const e = $(i); e.value = ''; e.style.display = c.f[i] ? 'block' : 'none'; e.placeholder = c.f[i] || ''; }
+  $('lcancel').style.display = locked ? 'none' : 'block';
+  $('lock').style.display = 'flex';
+  setTimeout(() => $(Object.keys(c.f)[0]).focus(), 100);
+}
+async function lockNow() { await post('/api/lock', {}); showLock('unlock'); }
+$('lgo').onclick = async () => {
+  const v = id => $(id).value, err = t => { $('le').textContent = t; };
+  if (lmode === 'unlock') {
+    const r = await post('/api/unlock', { pin: v('p0') });
+    if (!r.ok) return err(r.error);
+    locked = false; $('lock').style.display = 'none'; boot();
+  } else {
+    if (v('p1') !== v('p2')) return err('الرمزان غير متطابقين');
+    const r = await post('/api/setpin', { pin: v('p1'), old: v('p0') });
+    if (!r.ok) return err(r.error);
+    hasPin = !r.removed; $('lock').style.display = 'none'; toast(r.removed ? 'تمت إزالة القفل' : 'تم حفظ رمز القفل ✅');
+  }
+};
+$('lcancel').onclick = () => { $('lock').style.display = 'none'; };
+['p0', 'p1', 'p2'].forEach(i => $(i).addEventListener('keydown', e => { if (e.key === 'Enter') $('lgo').click(); }));
+$('m-pin').onclick = () => showLock(hasPin ? 'change' : 'setup');
+$('m-lock').onclick = () => hasPin ? lockNow() : toast('عيّن رمز قفل أولًا من هذه القائمة.');
+document.addEventListener('visibilitychange', () => {   // يُقفل تلقائيًا إن غبت أكثر من دقيقة
+  if (document.hidden) hiddenAt = Date.now();
+  else if (hasPin && !locked && hiddenAt && Date.now() - hiddenAt > 60000) lockNow();
+});
+
+function boot() { show(); loadStatus(); }
+(async () => {
+  try {
+    const s = await (await _f('/api/lock-status')).json();
+    hasPin = s.hasPin;
+    if (s.hasPin && !s.unlocked) return showLock('unlock');
+    if (!s.hasPin && !localStorage.getItem('nopin')) {
+      if (confirm('هل تريد تعيين رمز قفل لحماية الأرشيف؟')) showLock('setup'); else localStorage.setItem('nopin', '1');
+    }
+  } catch {}
+  boot();
+})();
+setInterval(() => { if (!locked) loadStatus(); }, 5000);
 setInterval(() => {
-  if ($('viewer').style.display === 'flex') return;
+  if (locked || $('viewer').style.display === 'flex') return;
   if (cur) loadThread(); else renderCurrent();
 }, 4000);
 </script>

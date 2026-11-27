@@ -119,9 +119,22 @@ function ensureGroupName(sock, jid) {
   sock.groupMetadata(jid).then(g => { db.names[jid] = g.subject; save(); }).catch(() => {});
 }
 
+const recent = [];
+const note = (k, jid, extra = '') => { recent.unshift({ t: Date.now(), k, jid, name: nameOf(jid), extra: String(extra).slice(0, 80) }); if (recent.length > 60) recent.length = 60; };
 async function store(sock, m) {
   const jid = norm(m.key.remoteJid);
-  if (!jid || !m.message || jid.endsWith('@newsletter')) return;
+  if (!jid || jid.endsWith('@newsletter')) return;
+  if (!m.message) {
+    if (m.messageStubType === 2 && m.key.id && jid !== 'status@broadcast') {   // CIPHERTEXT: تعذّر فك التشفير
+      if (!db.messages[m.key.id]) {
+        db.messages[m.key.id] = { id: m.key.id, chat: jid, fromMe: !!m.key.fromMe, sender: norm(m.key.participant || jid), text: '', type: 'undecrypted', ts: Number(m.messageTimestamp) * 1000 || Date.now(), media: null, deleted: false, placeholder: true };
+        save();
+      }
+      note('undecrypted', jid, m.messageStubParameters?.[0] || '');
+      console.log('رسالة لم تُفك تشفيرها من', jid);
+    } else note('stub', jid, 'stub ' + (m.messageStubType ?? ''));
+    return;
+  }
   const raw = unwrap(m.message);
   const msg = raw.editedMessage ? unwrap(raw.editedMessage.message) : raw;
   if (msg.protocolMessage) {
@@ -146,7 +159,7 @@ async function store(sock, m) {
     return;
   }
   const type = Object.keys(msg).find(k => !SKIP.has(k));
-  if (!type) return;
+  if (!type) { note('skipped', jid, Object.keys(msg).join(',')); return; }
   const body = msg[type];
   const sender = norm(m.key.participant || jid);
   const alt = norm(m.key.remoteJidAlt), pAlt = norm(m.key.participantAlt);
@@ -164,8 +177,11 @@ async function store(sock, m) {
   if (m.pushName && !rec.fromMe) db.names[sender] ||= m.pushName;
   await learnLid(sock, jid); if (sender !== jid) await learnLid(sock, sender);
   if (jid.endsWith('@g.us')) ensureGroupName(sock, jid);
-  if (db.messages[rec.id] && !db.messages[rec.id].placeholder) return;
+  const ex = db.messages[rec.id];
+  if (ex && !ex.placeholder) return;
+  if (ex?.deleted) { rec.deleted = true; rec.deletedAt = ex.deletedAt; }
   db.messages[rec.id] = rec; save();
+  note('stored', jid, type);
   status.lastMsgAt = Date.now();
   if (/^(image|video|audio|document|sticker)Message$/.test(type)) saveMedia(sock, m, body, rec).catch(e => console.log('media:', e.message));
 }
@@ -236,7 +252,12 @@ app.use((req, res, next) => {   // حماية: لا يقبل إلا طلبات �
 // ---- قفل بالرمز (PIN) ----
 const sessions = new Map();
 const cookieOf = (req) => Object.fromEntries((req.headers.cookie || '').split(';').map(x => x.trim().split('=')).filter(a => a[0]));
-const authed = (req) => (sessions.get(cookieOf(req).sess) || 0) > Date.now();
+const IDLE = 5 * 60e3;
+const authed = (req) => {
+  const t = cookieOf(req).sess, e = sessions.get(t) || 0;
+  if (e <= Date.now()) { sessions.delete(t); return false; }
+  sessions.set(t, Date.now() + IDLE); return true;
+};
 const hashPin = (pin, salt) => crypto.scryptSync(String(pin), salt, 32).toString('hex');
 const checkPin = (pin) => {
   if (!db.pin) return true;
@@ -244,8 +265,8 @@ const checkPin = (pin) => {
 };
 const startSession = (res) => {
   const t = crypto.randomBytes(24).toString('hex');
-  sessions.set(t, Date.now() + 12 * 3600e3);
-  res.setHeader('Set-Cookie', `sess=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`);
+  sessions.set(t, Date.now() + IDLE);
+  res.setHeader('Set-Cookie', `sess=${t}; HttpOnly; SameSite=Strict; Path=/`);
 };
 let fails = 0, lockedUntil = 0;
 app.use((req, res, next) => {
@@ -358,6 +379,16 @@ app.post('/api/react', wrap(async (req) => {
   if (!r) throw new Error('الرسالة غير موجودة');
   await online().sendMessage(r.chat, { react: { text: emoji || '', key: keyOf(r) } });
   return {};
+}));
+app.post('/api/status-seen', wrap(async (req) => {
+  const r = db.messages[req.body?.id];
+  if (!r || r.chat !== 'status@broadcast' || r.fromMe) throw new Error('حالة غير صالحة');
+  await online().readMessages([{ remoteJid: 'status@broadcast', id: r.id, participant: r.sender, fromMe: false }]);
+  r.seenSent = true; r.seenAt = Date.now(); save();
+}));
+app.get('/api/diag', (_, res) => res.json({
+  state: status.state, lastMsgAt: status.lastMsgAt, now: Date.now(), messages: Object.keys(db.messages).length,
+  undecrypted: Object.values(db.messages).filter(m => m.type === 'undecrypted').length, recent: recent.slice(0, 40)
 }));
 app.post('/api/retry-media', wrap(async (req) => {
   const r = db.messages[req.body?.id];

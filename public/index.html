@@ -90,6 +90,9 @@ nav button.on{color:#fff;border-color:#fff}
 .lbox input{width:100%;margin:6px 0;padding:12px;border-radius:10px;border:0;font-size:18px;text-align:center;letter-spacing:4px;background:#fff;color:#111}
 .lbox button{width:100%;padding:12px;border:0;border-radius:10px;margin-top:8px;font-size:16px}
 #lgo{background:#25d366;color:#fff}#lcancel{background:#ffffff33;color:#fff}#le{color:#ffd0d0;min-height:22px;font-size:14px}
+#vh button,#vh a{background:none;border:0;color:#fff;font-size:22px;text-decoration:none;padding:6px 8px;line-height:1}
+#veye{margin-inline-start:auto}#veye.on{color:#25d366}
+.dg{display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}.dg small{color:var(--sub);direction:ltr}
 </style>
 </head>
 <body>
@@ -98,7 +101,7 @@ nav button.on{color:#fff;border-color:#fff}
     <button id="back" aria-label="رجوع">→</button><div id="hav"></div>
     <div class="g"><div class="t" id="title">أرشيف واتساب</div><div class="s" id="subt"></div></div>
     <button id="dots" aria-label="القائمة">⋮</button>
-    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div><div id="m-pin">🔒 رمز القفل (تعيين / تغيير / إزالة)</div><div id="m-lock">🔐 قفل الآن</div><div id="m-exp">💾 تصدير هذه المحادثة (txt)</div></div>
+    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div><div id="m-pin">🔒 رمز القفل (تعيين / تغيير / إزالة)</div><div id="m-lock">🔐 قفل الآن</div><div id="m-diag">🛠 تشخيص الرسائل الواردة</div><div id="m-exp">💾 تصدير هذه المحادثة (txt)</div></div>
   </header>
   <nav id="tabs"></nav>
   <div id="banner" class="banner"></div>
@@ -117,7 +120,7 @@ nav button.on{color:#fff;border-color:#fff}
 <button id="down" aria-label="للأسفل">⌄</button>
 <div id="viewer">
   <div id="bars"></div>
-  <div id="vh"><button id="x">✕</button><div id="vav"></div><div><b id="vn"></b><div id="vt" style="font-size:12px;opacity:.8"></div></div></div>
+  <div id="vh"><button id="x">✕</button><div id="vav"></div><div><b id="vn"></b><div id="vt" style="font-size:12px;opacity:.8"></div></div><button id="veye" title="إعلام صاحب الحالة بأنك شاهدتها">👁</button><a id="vdl" title="حفظ في الهاتف">⬇</a></div>
   <div id="vc"></div><div id="cap"></div>
 </div>
 <div id="lb"><img alt=""></div>
@@ -141,7 +144,7 @@ const same = (a, b) => new Date(a).toDateString() === new Date(b).toDateString()
 const day = ts => same(ts, Date.now()) ? 'اليوم' : same(ts, Date.now() - 864e5) ? 'أمس' : D(ts);
 const DT = ts => day(ts) + '، ' + T(ts);
 const FULL = ts => new Date(ts).toLocaleString('ar', { dateStyle: 'full', timeStyle: 'medium' });
-const LBL = { imageMessage: '📷 صورة', videoMessage: '🎥 فيديو', audioMessage: '🎤 رسالة صوتية', documentMessage: '📄 مستند', stickerMessage: 'ملصق', revoked: '🚫 رسالة محذوفة (لم تُلتقط قبل الحذف)' };
+const LBL = { imageMessage: '📷 صورة', videoMessage: '🎥 فيديو', audioMessage: '🎤 رسالة صوتية', documentMessage: '📄 مستند', stickerMessage: 'ملصق', revoked: '🚫 رسالة محذوفة (لم تُلتقط قبل الحذف)', undecrypted: '⚠️ رسالة لم يتم فك تشفيرها (قد تصل لاحقًا)' };
 const prev = m => m.text || LBL[m.type] || 'رسالة';
 const pv = (m, group) => (m.fromMe ? '✓✓ ' : (group && m.senderName ? m.senderName + ': ' : '')) + prev(m);
 const PAGE = 120;
@@ -228,7 +231,7 @@ async function renderStatus(delOnly) {
   const sig = 's' + delOnly + q + JSON.stringify(gs); if (sig === listSig) return; listSig = sig;
   const box = $('view'), st = box.scrollTop; box.replaceChildren();
   if (!gs.length) return box.append(empty(q ? 'لا نتائج.' : delOnly ? 'لا توجد حالات محذوفة حتى الآن.' : 'لا توجد حالات محفوظة بعد. ستُحفظ فور ظهورها.'));
-  box.append(el('div', 'sec', delOnly ? 'حالات تم حذفها' : 'التحديثات الأخيرة'));
+  box.append(el('div', 'sec', delOnly ? 'حالات تم حذفها' : 'التحديثات الأخيرة — مشاهدتك هنا سرّية، و👁 داخل الحالة لإعلام صاحبها'));
   gs.forEach((g, gi) => {
     const sub = delOnly ? '❌ حُذفت ' + DT(g.last.deletedAt) : day(g.last.ts) + '، ' + T(g.last.ts);
     const r = row(ringAvatar(g.name, 48, g.items.length, delOnly || g.deleted === g.items.length), g.name, sub, delOnly, '', g.deleted && !delOnly ? '❌ ' + g.deleted : '');
@@ -262,7 +265,7 @@ function msgNode(m, group, cont) {
     else { n = el('a', '', '📎 ملف'); n.href = u; }
     d.append(n);
   } else if (LBL[m.type]) {
-    if (m.type === 'revoked') d.append(el('div', 'txt', LBL.revoked));
+    if (m.type === 'revoked' || m.type === 'undecrypted') d.append(el('div', 'txt', LBL[m.type]));
     else if (m.mediaError || Date.now() - m.ts > 120000) {
       const f = el('div', 'fail', '⚠️ ' + LBL[m.type] + ' — تعذر حفظ الملف');
       if (m.retry) { const b = el('button', '', 'إعادة المحاولة'); b.onclick = async () => { b.disabled = true; const r = await post('/api/retry-media', { id: m.id }); toast(r.ok ? 'تم تحميل الملف ✅' : 'تعذر: ' + r.error); loadThread(); }; f.append(b); }
@@ -445,6 +448,17 @@ function showStatus(i) {
   $('vav').replaceChildren(avatar(g.name, 38));
   $('vn').textContent = g.name;
   $('vt').textContent = DT(m.ts) + (m.deleted ? ' • ❌ حُذفت ' + DT(m.deletedAt) : '');
+  const eye = $('veye'), dl = $('vdl');
+  eye.style.display = m.fromMe ? 'none' : ''; eye.className = m.seenSent ? 'on' : '';
+  eye.onclick = async () => {
+    if (m.seenSent) return toast('سبق إعلام صاحب الحالة بالمشاهدة');
+    vw.paused = true;
+    const ok = confirm('سيعرف ' + g.name + ' أنك شاهدت حالته. هل تريد المتابعة؟');
+    vw.paused = false; if (!ok) return;
+    const r = await post('/api/status-seen', { id: m.id });
+    if (r.ok) { m.seenSent = true; eye.className = 'on'; toast('تم إعلام ' + g.name + ' بالمشاهدة 👁'); } else toast('تعذر: ' + r.error);
+  };
+  if (m.media) { dl.href = '/media/' + m.media; dl.download = m.media; dl.style.display = ''; } else dl.style.display = 'none';
   const vc = $('vc'); vc.replaceChildren();
   let ms = 5000;
   if (m.media && m.type === 'videoMessage') {
@@ -479,6 +493,15 @@ vcEl.addEventListener('click', e => {
 $('dots').onclick = e => { e.stopPropagation(); const m = $('menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
 document.addEventListener('click', () => { $('menu').style.display = 'none'; });
 $('m-imp').onclick = () => $('file').click();
+const KL = { stored: '✅ حُفظت', undecrypted: '⚠️ لم تُفك تشفيرها', skipped: '⏭ نوع غير مدعوم', stub: 'ℹ️ حدث نظام' };
+$('m-diag').onclick = async () => {
+  const d = await (await fetch('/api/diag')).json();
+  const c = $('sc'); c.replaceChildren(el('h3', '', 'تشخيص الرسائل الواردة'));
+  const p = el('p', '', 'الاتصال: ' + d.state + ' • الرسائل المحفوظة: ' + d.messages + ' • رسائل لم تُفك تشفيرها: ' + d.undecrypted); c.append(p);
+  if (!d.recent.length) c.append(el('p', '', 'لم تصل أي رسالة منذ آخر تشغيل للخادم.'));
+  for (const x of d.recent) { const r = el('div', 'dg'); r.append(el('span', '', (KL[x.k] || x.k) + ' • ' + x.name), el('small', '', T(x.t) + ' ' + x.extra)); c.append(r); }
+  $('sheet').style.display = 'flex';
+};
 $('m-exp').onclick = () => { if (cur) location.href = '/api/export?jid=' + encodeURIComponent(cur.jid); else toast('افتح محادثة أولًا ثم اختر التصدير.'); };
 $('m-sync').onclick = async () => {
   toast('جارٍ طلب الأسماء من واتساب...');
@@ -641,24 +664,25 @@ $('m-pin').onclick = () => showLock(hasPin ? 'change' : 'setup');
 $('m-lock').onclick = () => hasPin ? lockNow() : toast('عيّن رمز قفل أولًا من هذه القائمة.');
 document.addEventListener('visibilitychange', () => {   // يُقفل تلقائيًا إن غبت أكثر من دقيقة
   if (document.hidden) hiddenAt = Date.now();
-  else if (hasPin && !locked && hiddenAt && Date.now() - hiddenAt > 60000) lockNow();
+  else if (hasPin && !locked && hiddenAt && Date.now() - hiddenAt > 30000) lockNow();
 });
 
+window.addEventListener('pageshow', e => { if (e.persisted && hasPin && !locked) lockNow(); });
 function boot() { show(); loadStatus(); }
 (async () => {
   try {
     const s = await (await _f('/api/lock-status')).json();
     hasPin = s.hasPin;
-    if (s.hasPin && !s.unlocked) return showLock('unlock');
+    if (s.hasPin) { if (s.unlocked) await post('/api/lock', {}); return showLock('unlock'); }
     if (!s.hasPin && !localStorage.getItem('nopin')) {
       if (confirm('هل تريد تعيين رمز قفل لحماية الأرشيف؟')) showLock('setup'); else localStorage.setItem('nopin', '1');
     }
   } catch {}
   boot();
 })();
-setInterval(() => { if (!locked) loadStatus(); }, 5000);
+setInterval(() => { if (!locked && !document.hidden) loadStatus(); }, 5000);
 setInterval(() => {
-  if (locked || $('viewer').style.display === 'flex') return;
+  if (locked || document.hidden || $('viewer').style.display === 'flex') return;
   if (cur) loadThread(); else renderCurrent();
 }, 4000);
 </script>

@@ -78,6 +78,7 @@ const numberOf = (jid) => {
 };
 
 function markDeleted(id, key) {
+  if (purgedSet.has(id)) return;
   let r = db.messages[id];
   if (!r && key?.remoteJid) {   // رسالة حُذفت قبل أن نلتقطها: نسجّل الحذف على الأقل
     const chat = norm(key.remoteJid);
@@ -123,7 +124,7 @@ const recent = [];
 const note = (k, jid, extra = '') => { recent.unshift({ t: Date.now(), k, jid, name: nameOf(jid), extra: String(extra).slice(0, 80) }); if (recent.length > 60) recent.length = 60; };
 async function store(sock, m) {
   const jid = norm(m.key.remoteJid);
-  if (!jid || jid.endsWith('@newsletter')) return;
+  if (!jid || jid.endsWith('@newsletter') || purgedSet.has(m.key.id)) return;
   if (!m.message) {
     if (m.messageStubType === 2 && m.key.id && jid !== 'status@broadcast') {   // CIPHERTEXT: تعذّر فك التشفير
       if (!db.messages[m.key.id]) {
@@ -271,14 +272,14 @@ const startSession = (res) => {
 let fails = 0, lockedUntil = 0;
 app.use((req, res, next) => {
   const p = req.path;
-  if (!db.pin || p === '/api/lock-status' || p === '/api/unlock' || !(p.startsWith('/api') || p.startsWith('/media')) || authed(req)) return next();
+  if (!db.pin || p === '/api/lock-status' || p === '/api/unlock' || p === '/api/bio/challenge' || p === '/api/bio/login' || !(p.startsWith('/api') || p.startsWith('/media')) || authed(req)) return next();
   res.status(401).json({ ok: false, error: 'locked' });
 });
 app.use(express.static('public'));
 app.use('/media', express.static(MEDIA));
 
 app.use(express.json({ limit: '20mb' }));
-app.get('/api/lock-status', (req, res) => res.json({ hasPin: !!db.pin, unlocked: !db.pin || authed(req) }));
+app.get('/api/lock-status', (req, res) => res.json({ hasPin: !!db.pin, bio: !!db.bio?.length, unlocked: !db.pin || authed(req) }));
 app.post('/api/unlock', (req, res) => {
   if (Date.now() < lockedUntil) return res.json({ ok: false, error: 'محاولات كثيرة، انتظر ' + Math.ceil((lockedUntil - Date.now()) / 1000) + ' ثانية' });
   if (!checkPin(req.body?.pin ?? '')) {
@@ -301,7 +302,7 @@ app.post('/api/setpin', (req, res) => {
   db.pin = { salt, hash: hashPin(pin, salt) }; save(); startSession(res);
   res.json({ ok: true });
 });
-app.get('/api/status', (_, res) => res.json({ ...status, now: Date.now(), messages: Object.keys(db.messages).length, contacts: Object.keys(db.contacts).length, imported: db.vcards.length }));
+app.get('/api/status', (_, res) => res.json({ ...status, settings: db.settings, now: Date.now(), messages: Object.keys(db.messages).length, contacts: Object.keys(db.contacts).length, imported: db.vcards.length }));
 
 app.post('/api/contacts', (req, res) => {
   const list = Array.isArray(req.body?.list) ? req.body.list : [];
@@ -390,6 +391,79 @@ app.get('/api/diag', (_, res) => res.json({
   state: status.state, lastMsgAt: status.lastMsgAt, now: Date.now(), messages: Object.keys(db.messages).length,
   undecrypted: Object.values(db.messages).filter(m => m.type === 'undecrypted').length, recent: recent.slice(0, 40)
 }));
+// ---------- الحذف من الأرشيف وانتهاء الحالات ----------
+db.settings ||= {};
+if (db.settings.expireStatus === undefined) db.settings.expireStatus = true;
+const purgedSet = new Set(db.purged || []);
+function purgeRecords(ids) {
+  let n = 0;
+  for (const id of ids) {
+    const r = db.messages[id]; if (!r) continue;
+    if (r.media) fs.rmSync(`${MEDIA}/${r.media}`, { force: true });
+    delete db.messages[id]; purgedSet.add(id); n++;
+  }
+  db.purged = [...purgedSet].slice(-5000);
+  if (n) save();
+  return n;
+}
+function purgeStatuses() {
+  if (db.settings.expireStatus === false) return;
+  const old = Object.values(db.messages).filter(m => m.chat === 'status@broadcast' && !m.deleted && Date.now() - m.ts > 24 * 3600e3).map(m => m.id);
+  if (old.length) { purgeRecords(old); console.log('حُذفت حالات انتهت مدتها:', old.length); }
+}
+purgeStatuses(); setInterval(purgeStatuses, 30 * 60e3);
+
+app.post('/api/purge', wrap(async (req) => ({ count: purgeRecords((req.body?.ids || []).slice(0, 500)) })));
+app.post('/api/clear-chat', wrap(async (req) => {
+  const { jid, onlyDeleted } = req.body || {};
+  if (!jid) throw new Error('محادثة غير محددة');
+  return { count: purgeRecords(Object.values(db.messages).filter(m => m.chat === jid && (!onlyDeleted || m.deleted)).map(m => m.id)) };
+}));
+app.post('/api/clear-all-deleted', wrap(async (req) => {
+  const st = req.body?.scope === 'statuses';
+  return { count: purgeRecords(Object.values(db.messages).filter(m => m.deleted && (m.chat === 'status@broadcast') === st).map(m => m.id)) };
+}));
+app.post('/api/settings', wrap(async (req) => {
+  if (typeof req.body?.expireStatus === 'boolean') { db.settings.expireStatus = req.body.expireStatus; save(); purgeStatuses(); }
+  return { settings: db.settings };
+}));
+
+// ---------- الدخول بالبصمة (WebAuthn) ----------
+const bioChallenges = new Map();
+const b64uDec = (x) => Buffer.from(String(x).replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+app.get('/api/bio/challenge', (req, res) => {
+  if (!db.bio?.length) return res.json({ ok: false });
+  const ch = crypto.randomBytes(32).toString('base64url');
+  bioChallenges.set(ch, Date.now() + 60000);
+  res.json({ ok: true, challenge: ch, ids: db.bio.map(b => b.id) });
+});
+app.post('/api/bio/register', (req, res) => {
+  const { id, pk, alg } = req.body || {};
+  if (!db.pin) return res.json({ ok: false, error: 'عيّن رمز قفل أولًا' });
+  if (!id || !pk || ![-7, -257].includes(alg)) return res.json({ ok: false, error: 'بيانات غير صالحة' });
+  try { crypto.createPublicKey({ key: b64uDec(pk), format: 'der', type: 'spki' }); } catch { return res.json({ ok: false, error: 'مفتاح غير صالح' }); }
+  db.bio = (db.bio || []).filter(b => b.id !== id).concat({ id, pk, alg }).slice(-3); save();
+  res.json({ ok: true });
+});
+app.post('/api/bio/clear', (req, res) => { delete db.bio; save(); res.json({ ok: true }); });
+app.post('/api/bio/login', (req, res) => {
+  try {
+    if (Date.now() < lockedUntil) throw new Error('محاولات كثيرة، انتظر قليلًا');
+    const { id, authData, clientData, sig } = req.body || {};
+    const k = (db.bio || []).find(b => b.id === id);
+    if (!k) throw new Error('بصمة غير مسجلة');
+    const cd = b64uDec(clientData), ad = b64uDec(authData), sg = b64uDec(sig), c = JSON.parse(cd.toString());
+    const exp = bioChallenges.get(c.challenge); bioChallenges.delete(c.challenge);
+    if (c.type !== 'webauthn.get' || !exp || exp < Date.now()) throw new Error('انتهت المحاولة، أعد المحاولة');
+    if (c.origin !== 'http://localhost:3000') throw new Error('عنوان غير مسموح');
+    if (!ad.subarray(0, 32).equals(crypto.createHash('sha256').update('localhost').digest())) throw new Error('نطاق غير صحيح');
+    if (!(ad[32] & 1) || !(ad[32] & 4)) throw new Error('لم يتم التحقق بالبصمة');
+    const data = Buffer.concat([ad, crypto.createHash('sha256').update(cd).digest()]);
+    if (!crypto.verify('sha256', data, crypto.createPublicKey({ key: b64uDec(k.pk), format: 'der', type: 'spki' }), sg)) throw new Error('فشل التحقق');
+    fails = 0; startSession(res); res.json({ ok: true });
+  } catch (e) { if (++fails >= 5) { fails = 0; lockedUntil = Date.now() + 60000; } res.json({ ok: false, error: e.message }); }
+});
+
 app.post('/api/retry-media', wrap(async (req) => {
   const r = db.messages[req.body?.id];
   if (!r?.raw) throw new Error('لا يمكن إعادة المحاولة لهذه الرسالة');

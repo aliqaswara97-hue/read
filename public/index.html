@@ -93,6 +93,7 @@ nav button.on{color:#fff;border-color:#fff}
 #vh button,#vh a{background:none;border:0;color:#fff;font-size:22px;text-decoration:none;padding:6px 8px;line-height:1}
 #veye{margin-inline-start:auto}#veye.on{color:#25d366}
 .dg{display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}.dg small{color:var(--sub);direction:ltr}
+#menu{max-height:70vh;overflow-y:auto}#lbio{background:#ffffff33;color:#fff}
 </style>
 </head>
 <body>
@@ -101,7 +102,7 @@ nav button.on{color:#fff;border-color:#fff}
     <button id="back" aria-label="رجوع">→</button><div id="hav"></div>
     <div class="g"><div class="t" id="title">أرشيف واتساب</div><div class="s" id="subt"></div></div>
     <button id="dots" aria-label="القائمة">⋮</button>
-    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div><div id="m-pin">🔒 رمز القفل (تعيين / تغيير / إزالة)</div><div id="m-lock">🔐 قفل الآن</div><div id="m-diag">🛠 تشخيص الرسائل الواردة</div><div id="m-exp">💾 تصدير هذه المحادثة (txt)</div></div>
+    <div id="menu"><div id="m-imp">📇 استيراد جهات الاتصال (ملف vCard)</div><div id="m-sync">🔄 إعادة مزامنة الأسماء من واتساب</div><div id="m-pin">🔒 رمز القفل (تعيين / تغيير / إزالة)</div><div id="m-lock">🔐 قفل الآن</div><div id="m-diag">🛠 تشخيص الرسائل الواردة</div><div id="m-bio">👆 تفعيل الدخول بالبصمة</div><div id="m-ttl">⏳ حذف الحالات بعد 24 ساعة</div><div id="m-clear">🧹 مسح هذه الدردشة</div><div id="m-cleardel">🧹 مسح المحذوفة في هذه الدردشة</div><div id="m-delall">🗑 مسح كل الرسائل المحذوفة</div><div id="m-delstat">🗑 مسح كل الحالات المحذوفة</div><div id="m-exp">💾 تصدير هذه المحادثة (txt)</div></div>
   </header>
   <nav id="tabs"></nav>
   <div id="banner" class="banner"></div>
@@ -120,14 +121,14 @@ nav button.on{color:#fff;border-color:#fff}
 <button id="down" aria-label="للأسفل">⌄</button>
 <div id="viewer">
   <div id="bars"></div>
-  <div id="vh"><button id="x">✕</button><div id="vav"></div><div><b id="vn"></b><div id="vt" style="font-size:12px;opacity:.8"></div></div><button id="veye" title="إعلام صاحب الحالة بأنك شاهدتها">👁</button><a id="vdl" title="حفظ في الهاتف">⬇</a></div>
+  <div id="vh"><button id="x">✕</button><div id="vav"></div><div><b id="vn"></b><div id="vt" style="font-size:12px;opacity:.8"></div></div><button id="veye" title="إعلام صاحب الحالة بأنك شاهدتها">👁</button><a id="vdl" title="حفظ في الهاتف">⬇</a><button id="vdel" title="حذف من الأرشيف">🗑</button></div>
   <div id="vc"></div><div id="cap"></div>
 </div>
 <div id="lb"><img alt=""></div>
 <div id="sheet"><div id="sc"></div></div>
 <div id="lock"><div class="lbox"><div style="font-size:44px">🔒</div><h2 id="lt"></h2><p id="lm"></p>
   <input id="p0" type="password" inputmode="numeric" autocomplete="off"><input id="p1" type="password" inputmode="numeric" autocomplete="off"><input id="p2" type="password" inputmode="numeric" autocomplete="off">
-  <div id="le"></div><button id="lgo">فتح</button><button id="lcancel">إلغاء</button></div></div>
+  <div id="le"></div><button id="lgo">فتح</button><button id="lbio" style="display:none">👆 الدخول بالبصمة</button><button id="lcancel">إلغاء</button></div></div>
 <div id="toast"></div>
 <script>
 const $ = id => document.getElementById(id);
@@ -368,6 +369,8 @@ async function loadThread() {
       if (m.edited && !n.querySelector('.meta span[data-e]')) { const s = el('span', '', 'تم التعديل'); s.dataset.e = 1; n.querySelector('.meta').prepend(s); const t = n.querySelector('.txt'); if (t) { t.replaceChildren(); linkify(t, m.text); } }
     } else if (!th.known.has(m.id)) { appendMsg(m); added = true; }
   }
+  const ids = new Set(list.map(x => x.id));
+  for (const [id, n] of th.nodes) if (!ids.has(id)) { n.remove(); th.nodes.delete(id); th.known.delete(id); }
   if (added && atBottom) box.scrollTop = box.scrollHeight;
 }
 function appendMsg(m) {
@@ -400,6 +403,7 @@ function showInfo(m) {
   }
   if (m.text) btn('📋 نسخ النص', () => navigator.clipboard?.writeText(m.text).then(() => toast('تم النسخ')));
   if (m.fromMe && !m.deleted && m.text) btn('✏️ تعديل', async () => { const t = prompt('عدّل الرسالة:', m.text); if (t && t.trim() && t !== m.text) { const r = await post('/api/edit', { id: m.id, text: t }); toast(r.ok ? 'تم التعديل' : 'تعذر: ' + r.error); } });
+  btn(m.deleted ? '🗑 حذف نهائيًا من الأرشيف' : '🧹 حذف من الأرشيف', async () => { if (!confirm('حذف هذه الرسالة من الأرشيف نهائيًا؟ (لا يحذفها من واتساب)')) return; toast(cnt(await post('/api/purge', { ids: [m.id] }))); loadThread(); });
   if (m.fromMe && !m.deleted) btn('🗑 حذف للجميع', async () => { if (!confirm('حذف الرسالة للجميع؟ (ستبقى نسخة في الأرشيف)')) return; const r = await post('/api/delete', { id: m.id }); toast(r.ok ? 'تم الحذف' : 'تعذر: ' + r.error); });
   $('sheet').style.display = 'flex';
 }
@@ -459,6 +463,14 @@ function showStatus(i) {
     if (r.ok) { m.seenSent = true; eye.className = 'on'; toast('تم إعلام ' + g.name + ' بالمشاهدة 👁'); } else toast('تعذر: ' + r.error);
   };
   if (m.media) { dl.href = '/media/' + m.media; dl.download = m.media; dl.style.display = ''; } else dl.style.display = 'none';
+  $('vdel').onclick = async () => {
+    vw.paused = true; const ok = confirm('حذف هذه الحالة من الأرشيف نهائيًا؟'); vw.paused = false; if (!ok) return;
+    const r = await post('/api/purge', { ids: [m.id] });
+    if (!r.ok) return toast('تعذر: ' + r.error);
+    toast('تم الحذف'); g.items.splice(i, 1); listSig = null; renderCurrent();
+    if (!g.items.length) { vw.gs.splice(vw.gi, 1); if (!vw.gs.length) return closeViewer(); vw.gi = Math.min(vw.gi, vw.gs.length - 1); return showStatus(0); }
+    showStatus(Math.min(i, g.items.length - 1));
+  };
   const vc = $('vc'); vc.replaceChildren();
   let ms = 5000;
   if (m.media && m.type === 'videoMessage') {
@@ -490,8 +502,42 @@ vcEl.addEventListener('click', e => {
 });
 
 // ---------- القائمة واستيراد جهات الاتصال ----------
-$('dots').onclick = e => { e.stopPropagation(); const m = $('menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
+$('dots').onclick = e => {
+  e.stopPropagation();
+  $('m-clear').style.display = $('m-cleardel').style.display = cur ? '' : 'none';
+  $('m-bio').textContent = bioOn ? '👆 البصمة مفعّلة — اضغط للإلغاء' : '👆 تفعيل الدخول بالبصمة';
+  $('m-ttl').textContent = '⏳ حذف الحالات بعد 24 ساعة: ' + (curSettings.expireStatus !== false ? 'مفعّل' : 'متوقف'); const m = $('menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
 document.addEventListener('click', () => { $('menu').style.display = 'none'; });
+
+
+const cnt = r => r.ok ? 'تم حذف ' + r.count + ' عنصر من الأرشيف' : 'تعذر: ' + r.error;
+$('m-bio').onclick = async () => {
+  if (bioOn) { if (confirm('إلغاء الدخول بالبصمة؟')) { const r = await post('/api/bio/clear', {}); if (r.ok) { bioOn = false; toast('تم إلغاء البصمة'); } } return; }
+  if (!hasPin) return toast('عيّن رمز قفل أولًا من هذه القائمة.');
+  try { await bioEnable(); bioOn = true; toast('تم تفعيل الدخول بالبصمة ✅'); } catch (e) { toast('تعذر تفعيل البصمة: ' + (e.message || e)); }
+};
+$('m-ttl').onclick = async () => {
+  const on = curSettings.expireStatus === false;
+  if (on && !confirm('سيُحذف من الأرشيف كل ما مرّ عليه أكثر من 24 ساعة من الحالات (عدا التي حذفها أصحابها). متابعة؟')) return;
+  const r = await post('/api/settings', { expireStatus: on });
+  if (r.ok) { curSettings = r.settings; toast(on ? 'تم تفعيل حذف الحالات بعد 24 ساعة' : 'تم إيقاف الحذف التلقائي للحالات'); listSig = null; renderCurrent(); }
+};
+$('m-clear').onclick = async () => {
+  if (!cur || !confirm('مسح كل رسائل «' + cur.name + '» (بما فيها المحذوفة) من الأرشيف نهائيًا؟ لن تتأثر محادثتك في واتساب.')) return;
+  toast(cnt(await post('/api/clear-chat', { jid: cur.jid }))); th = null; loadThread();
+};
+$('m-cleardel').onclick = async () => {
+  if (!cur || !confirm('مسح الرسائل المحذوفة فقط في «' + cur.name + '» من الأرشيف نهائيًا؟')) return;
+  toast(cnt(await post('/api/clear-chat', { jid: cur.jid, onlyDeleted: true }))); th = null; loadThread();
+};
+$('m-delall').onclick = async () => {
+  if (!confirm('مسح كل الرسائل المحذوفة في جميع المحادثات نهائيًا؟')) return;
+  toast(cnt(await post('/api/clear-all-deleted', { scope: 'messages' }))); listSig = null; if (cur) { th = null; loadThread(); } renderCurrent();
+};
+$('m-delstat').onclick = async () => {
+  if (!confirm('مسح كل الحالات المحذوفة من الأرشيف نهائيًا؟')) return;
+  toast(cnt(await post('/api/clear-all-deleted', { scope: 'statuses' }))); listSig = null; renderCurrent();
+};
 $('m-imp').onclick = () => $('file').click();
 const KL = { stored: '✅ حُفظت', undecrypted: '⚠️ لم تُفك تشفيرها', skipped: '⏭ نوع غير مدعوم', stub: 'ℹ️ حدث نظام' };
 $('m-diag').onclick = async () => {
@@ -562,7 +608,7 @@ $('q').oninput = e => { q = e.target.value.trim().toLowerCase(); listSig = null;
 async function loadStatus() {
   const b = $('banner');
   try {
-    const s = await (await fetch('/api/status')).json();
+    const s = await (await fetch('/api/status')).json(); curSettings = s.settings || {};
     if (s.state === 'pairing' && s.code) {
       b.replaceChildren('أدخل هذا الكود في واتساب: الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف', el('b', '', s.code));
       b.style.display = 'block';
@@ -630,7 +676,7 @@ $('rcx').onclick = () => { rcancel = true; mr.stop(); };
 $('rsend').onclick = () => mr.stop();
 
 // ---------- قفل الشاشة ----------
-let locked = false, hasPin = false, lmode = 'unlock', hiddenAt = 0;
+let bioOn = false, bioBusy = false, curSettings = {}, locked = false, hasPin = false, lmode = 'unlock', hiddenAt = 0;
 const LM = {
   unlock: { t: 'أرشيف واتساب', m: 'أدخل رمز القفل', f: { p0: 'الرمز' }, b: 'فتح' },
   setup: { t: 'تعيين رمز القفل', m: 'اختر رمزًا من 4 خانات أو أكثر', f: { p1: 'الرمز الجديد', p2: 'أعد كتابة الرمز' }, b: 'حفظ' },
@@ -643,7 +689,39 @@ function showLock(mode) {
   $('lcancel').style.display = locked ? 'none' : 'block';
   $('lock').style.display = 'flex';
   setTimeout(() => $(Object.keys(c.f)[0]).focus(), 100);
+  $('lbio').style.display = (mode === 'unlock' && bioOn) ? 'block' : 'none';
+  if (mode === 'unlock' && bioOn) setTimeout(tryBio, 400);
 }
+const b64u = {
+  enc: b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+  dec: s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
+};
+async function bioEnable() {
+  if (!navigator.credentials) throw new Error('المتصفح لا يدعم البصمة');
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'أرشيف واتساب', id: 'localhost' },
+    user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'owner', displayName: 'المالك' },
+    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000 } });
+  const r = cred.response;
+  const res = await post('/api/bio/register', { id: b64u.enc(cred.rawId), pk: b64u.enc(r.getPublicKey()), alg: r.getPublicKeyAlgorithm() });
+  if (!res.ok) throw new Error(res.error);
+}
+async function bioLogin() {
+  const ch = await (await _f('/api/bio/challenge')).json();
+  if (!ch.ok) throw new Error('البصمة غير مفعّلة');
+  const a = await navigator.credentials.get({ publicKey: { challenge: b64u.dec(ch.challenge), rpId: 'localhost', userVerification: 'required', timeout: 60000,
+    allowCredentials: ch.ids.map(id => ({ type: 'public-key', id: b64u.dec(id) })) } });
+  const r = a.response;
+  return post('/api/bio/login', { id: b64u.enc(a.rawId), authData: b64u.enc(r.authenticatorData), clientData: b64u.enc(r.clientDataJSON), sig: b64u.enc(r.signature) });
+}
+async function tryBio() {
+  if (bioBusy || !locked) return; bioBusy = true;
+  try { const r = await bioLogin(); if (r.ok) { locked = false; $('lock').style.display = 'none'; boot(); } else $('le').textContent = r.error || ''; }
+  catch (e) { /* أُلغيت المحاولة */ }
+  bioBusy = false;
+}
+$('lbio').onclick = tryBio;
 async function lockNow() { await post('/api/lock', {}); showLock('unlock'); }
 $('lgo').onclick = async () => {
   const v = id => $(id).value, err = t => { $('le').textContent = t; };
@@ -672,7 +750,7 @@ function boot() { show(); loadStatus(); }
 (async () => {
   try {
     const s = await (await _f('/api/lock-status')).json();
-    hasPin = s.hasPin;
+    hasPin = s.hasPin; bioOn = !!s.bio;
     if (s.hasPin) { if (s.unlocked) await post('/api/lock', {}); return showLock('unlock'); }
     if (!s.hasPin && !localStorage.getItem('nopin')) {
       if (confirm('هل تريد تعيين رمز قفل لحماية الأرشيف؟')) showLock('setup'); else localStorage.setItem('nopin', '1');
